@@ -19,8 +19,9 @@ module ContentFilters
             keyword = keyword_filter.keyword.downcase
             tag_id = status.tags.where(name: keyword.gsub('#', '')).ids
             banned_keyword_status_ids << status.id if tag_id.present?
-          elsif keyword_filter.both? || keyword_filter.content?
-            banned_keyword_status_ids << status.id if status.search_word_ban(keyword_filter.keyword)
+          end
+          if keyword_filter.both? || keyword_filter.content?
+            banned_keyword_status_ids << status.id if status.search_word_ban(keyword_filter.keyword)                  
           end
         end
       end

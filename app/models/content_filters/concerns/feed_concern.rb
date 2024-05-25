@@ -9,7 +9,8 @@ module ContentFilters::Concerns::FeedConcern
       else
         unhydrated = redis.zrangebyscore(key, "(#{min_id}", "(#{max_id}", limit: [0, limit], with_scores: true).map { |id| id.first.to_i }
       end
-      
+  
+      #Status.where(id: unhydrated)
       filter_and_cache_statuses(unhydrated)
     end
 
@@ -19,10 +20,9 @@ module ContentFilters::Concerns::FeedConcern
       if filter_service.server_setting?
         banned_ids = filter_service.keyword_filters_scope
       end
-
       statuses = Status.where(id: unhydrated)
       statuses = statuses.where.not(id: banned_ids) if banned_ids.any?
-      statuses.cache_ids
+      statuses
     end
       
 end
