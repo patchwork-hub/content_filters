@@ -12,7 +12,7 @@ module ContentFilters
 
     def keyword_filters_scope
       banned_keyword_status_ids = []
-      server_setting = ContentFilters::ServerSetting.where(parent_id: nil, name: 'Content Moderation').last
+      server_setting = ContentFilters::ServerSetting.where(name: 'Content filters').last
       Status.order(created_at: :desc).limit(400).each do |status|
         ContentFilters::KeywordFilter.where(is_active: true, server_setting_id: server_setting&.id).each do |keyword_filter|
           if keyword_filter.hashtag? || keyword_filter.both?
