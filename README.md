@@ -1,4 +1,4 @@
-## A ruby gem to filter contents on your Mastodon instance's timelines
+## A Ruby on Rails plugin for filtering content on Mastodon timelines
 
 ## Features
 
