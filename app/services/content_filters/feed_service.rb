@@ -14,14 +14,18 @@ module ContentFilters
       banned_keyword_status_ids = []
       server_setting = ContentFilters::ServerSetting.where(name: 'Content filters').last
       Status.order(created_at: :desc).limit(400).each do |status|
-        ContentFilters::KeywordFilter.where(is_active: true, server_setting_id: server_setting&.id).each do |keyword_filter|
-          if keyword_filter.hashtag? || keyword_filter.both?
-            keyword = keyword_filter.keyword.downcase
-            tag_id = status.tags.where(name: keyword.gsub('#', '')).ids
-            banned_keyword_status_ids << status.id if tag_id.present?
-          end
-          if keyword_filter.both? || keyword_filter.content?
-            banned_keyword_status_ids << status.id if status.search_word_ban(keyword_filter.keyword)                  
+        ContentFilters::KeywordFilterGroup.includes(:keyword_filters).where(
+        is_active: true, server_setting_id: server_setting&.id
+        ).each do |keyword_filter_group|
+          keyword_filter_group.keyword_filters.each do |keyword_filter|
+            if keyword_filter.hashtag? || keyword_filter.both?
+              keyword = keyword_filter.keyword.downcase
+              tag_id = status.tags.where(name: keyword.gsub('#', '')).ids
+              banned_keyword_status_ids << status.id if tag_id.present?
+            end
+            if keyword_filter.both? || keyword_filter.content?
+              banned_keyword_status_ids << status.id if status.search_word_ban(keyword_filter.keyword)                  
+            end
           end
         end
       end
