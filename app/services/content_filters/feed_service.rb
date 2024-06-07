@@ -13,11 +13,16 @@ module ContentFilters
     def keyword_filters_scope
       banned_keyword_status_ids = []
       server_setting = ContentFilters::ServerSetting.where(name: 'Content filters').last
+
+      return [] unless server_setting&.value
+
       Status.order(created_at: :desc).limit(400).each do |status|
+
         ContentFilters::KeywordFilterGroup.includes(:keyword_filters).where(
         is_active: true, server_setting_id: server_setting&.id
         ).each do |keyword_filter_group|
-          keyword_filter_group.keyword_filters.each do |keyword_filter|
+          keyword_filter_group.keyword_filters.where(is_active: true).each do |keyword_filter|
+
             if keyword_filter.hashtag? || keyword_filter.both?
               keyword = keyword_filter.keyword.downcase
               tag_id = status.tags.where(name: keyword.gsub('#', '')).ids
@@ -28,6 +33,7 @@ module ContentFilters
             end
           end
         end
+
       end
       banned_keyword_status_ids
     end
