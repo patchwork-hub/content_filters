@@ -21,7 +21,7 @@ module ContentFilters
         ContentFilters::KeywordFilterGroup.includes(:keyword_filters).where(
         is_active: true, server_setting_id: server_setting&.id
         ).each do |keyword_filter_group|
-          keyword_filter_group.keyword_filters.where(is_active: true).each do |keyword_filter|
+          keyword_filter_group.keyword_filters.each do |keyword_filter|
 
             if keyword_filter.hashtag? || keyword_filter.both?
               keyword = keyword_filter.keyword.downcase
