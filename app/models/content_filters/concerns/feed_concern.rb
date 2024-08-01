@@ -21,7 +21,7 @@ module ContentFilters::Concerns::FeedConcern
       end
       statuses = Status.where(id: unhydrated)
       statuses = statuses.where.not(id: banned_ids) if banned_ids.any?
-      statuses.cache_ids
+      statuses
     end
       
 end
