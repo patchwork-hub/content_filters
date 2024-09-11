@@ -8,11 +8,11 @@ To enable this plugin please make sure you have set up a Mastodon server and ins
 
 ### Features
 
-#### Filters
+#### Spam & moderation filters
 Filter your timelines by blocking posts with defined hashtags and keywords.
 
 
-#### Manage connection with Bluesky & Threads
+#### Federation controls
 Easily manage your timelines by blocking or unblocking Threads and Bluesky posts.
 
 ## Installation
