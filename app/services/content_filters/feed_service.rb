@@ -16,13 +16,24 @@ module ContentFilters
       setting_filter_types = ['Content filters', 'Spam filters']
 
       setting_filter_types.each do |setting_filter_type|
-        server_setting = ContentFilters::ServerSetting.find_by(name: setting_filter_type)
+
+        # Cache the server setting lookup for 30 minutes
+        server_setting = Rails.cache.fetch("server_setting_#{setting_filter_type}", expires_in: 30.minutes) do
+          ContentFilters::ServerSetting.find_by(name: setting_filter_type)
+        end
+        
         next unless server_setting&.value
 
-        keyword_filter_groups = ContentFilters::KeywordFilterGroup.includes(:keyword_filters)
-                                                                  .where(is_active: true, server_setting_id: server_setting.id)
+        # Cache keyword filter groups lookup for 10 seconds
+        keyword_filter_groups = Rails.cache.fetch("keyword_filter_groups_#{server_setting.id}", expires_in: 10.minutes) do
+          ContentFilters::KeywordFilterGroup.includes(:keyword_filters)
+                                          .where(is_active: true, server_setting_id: server_setting.id)
+        end
 
-        statuses = Status.order(created_at: :desc).limit(50).includes(:tags)
+        # Cache the status lookup for 10 seconds
+        statuses = Rails.cache.fetch("recent_statuses", expires_in: 5.minutes) do
+          Status.order(created_at: :desc).limit(50).includes(:tags)
+        end
 
         keyword_filter_groups.each do |keyword_filter_group|
           keyword_filter_group.keyword_filters.each do |keyword_filter|
