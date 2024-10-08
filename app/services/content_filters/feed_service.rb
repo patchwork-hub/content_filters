@@ -16,29 +16,28 @@ module ContentFilters
       setting_filter_types = ['Content filters', 'Spam filters']
 
       setting_filter_types.each do |setting_filter_type|
-
         server_setting = ContentFilters::ServerSetting.find_by(name: setting_filter_type)
-
         next unless server_setting&.value
 
-        Status.order(created_at: :desc).limit(400).each do |status|
+        keyword_filter_groups = ContentFilters::KeywordFilterGroup.includes(:keyword_filters)
+                                                                  .where(is_active: true, server_setting_id: server_setting.id)
 
-          ContentFilters::KeywordFilterGroup.includes(:keyword_filters).where(
-          is_active: true, server_setting_id: server_setting&.id
-          ).each do |keyword_filter_group|
-            keyword_filter_group.keyword_filters.each do |keyword_filter|
+        statuses = Status.order(created_at: :desc).limit(50).includes(:tags)
 
+        keyword_filter_groups.each do |keyword_filter_group|
+          keyword_filter_group.keyword_filters.each do |keyword_filter|
+            keyword = keyword_filter.keyword.downcase
+
+            statuses.each do |status|
               if keyword_filter.hashtag? || keyword_filter.both?
-                keyword = keyword_filter.keyword.downcase
                 tag_id = status.tags.where(name: keyword.gsub('#', '')).ids
                 banned_keyword_status_ids << status.id if tag_id.present?
               end
               if keyword_filter.both? || keyword_filter.content?
-                banned_keyword_status_ids << status.id if status.search_word_ban(keyword_filter.keyword)                  
+                banned_keyword_status_ids << status.id if status.search_word_ban(keyword_filter.keyword)
               end
             end
           end
-
         end
       end
 
