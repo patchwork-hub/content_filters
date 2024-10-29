@@ -1,5 +1,6 @@
 module ContentFilters::Concerns::FeedConcern
     extend ActiveSupport::Concern  
+    include Redisable
 
     def from_redis(limit, max_id, since_id, min_id)
       max_id = '+inf' if max_id.blank?
@@ -17,7 +18,7 @@ module ContentFilters::Concerns::FeedConcern
       filter_service = ContentFilters::FeedService.new()
       banned_ids = []
       if filter_service.server_setting?
-        banned_ids = filter_service.keyword_filters_scope
+        banned_ids = redis.zrange('banned_status_ids', 0, -1)
       end
       statuses = Status.where(id: unhydrated)
       statuses = statuses.where.not(id: banned_ids) if banned_ids.any?

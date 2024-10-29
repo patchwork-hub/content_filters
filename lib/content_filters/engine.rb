@@ -1,5 +1,7 @@
 module ContentFilters
     class Engine < ::Rails::Engine
-      # This will make Rails automatically load initializers from the plugin
+      isolate_namespace ContentFilters
+      
+      config.autoload_paths << File.expand_path("../app/workers/content_filters", __FILE__)
     end
   end

@@ -1,5 +1,7 @@
 module ContentFilters
   class ServerSetting < ApplicationRecord
+    self.table_name = 'server_settings'
+
     validates :name, presence: true
 
     has_many :user_server_settings

@@ -1,5 +1,6 @@
 module ContentFilters::Concerns::PublicFeedConcern
-  extend ActiveSupport::Concern  
+  extend ActiveSupport::Concern
+  include Redisable
 
  # @param [Account] account
   # @param [Hash] options
@@ -98,7 +99,7 @@ module ContentFilters::Concerns::PublicFeedConcern
     service = ContentFilters::FeedService.new(@account)
 
     if service.server_setting?
-      keyword_filtered_ids = service.keyword_filters_scope
+      keyword_filtered_ids = redis.zrange('banned_status_ids', 0, -1)
       scope = scope.where.not(id: keyword_filtered_ids)
     end
 
