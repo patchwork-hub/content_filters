@@ -16,10 +16,8 @@ module ContentFilters::Concerns::FeedConcern
 
     def filter_and_cache_statuses(unhydrated)
       filter_service = ContentFilters::FeedService.new()
-      banned_ids = []
-      if filter_service.server_setting?
-        banned_ids = redis.zrange('banned_status_ids', 0, -1)
-      end
+      banned_ids = filter_service.excluded_status_ids
+
       statuses = Status.where(id: unhydrated)
       statuses = statuses.where.not(id: banned_ids) if banned_ids.any?
       statuses

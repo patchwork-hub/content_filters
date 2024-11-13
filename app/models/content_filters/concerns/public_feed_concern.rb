@@ -98,10 +98,8 @@ module ContentFilters::Concerns::PublicFeedConcern
   def apply_filters(scope)
     service = ContentFilters::FeedService.new(@account)
 
-    if service.server_setting?
-      keyword_filtered_ids = redis.zrange('banned_status_ids', 0, -1)
-      scope = scope.where.not(id: keyword_filtered_ids)
-    end
+    banned_ids = service.excluded_status_ids
+    scope = scope.where.not(id: banned_ids) if banned_ids.any?
 
     scope.merge!(service.federation_filter_by_server_setting) if service.server_setting_federation?
     scope

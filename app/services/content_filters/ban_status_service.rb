@@ -10,6 +10,12 @@ module ContentFilters
 
       with_read_replica do
         setting_filter_types.each do |setting_filter_type|
+
+          # The keys wil generated as below
+          # 1.) content_filters_banned_status_ids
+          # 2.) span_filters_banned_status_ids
+          redis_key = "#{setting_filter_type.downcase.gsub(/\s+/, '_')}_banned_status_ids"
+
           server_setting = ContentFilters::ServerSetting.find_by(name: setting_filter_type)
           next unless server_setting&.value
 
@@ -23,20 +29,35 @@ module ContentFilters
 
               if keyword_filter.hashtag? || keyword_filter.both?
                 tag_id = status.tags.where(name: keyword.gsub('#', '')).ids
-                redis.zadd('banned_status_ids', status.id, status.id) if tag_id.present?
+                redis.zadd(redis_key, status.id, status.id) if tag_id.present?
               end
               if keyword_filter.both? || keyword_filter.content?
-                redis.zadd('banned_status_ids', status.id, status.id) if status.search_word_ban(keyword_filter.keyword)
+                redis.zadd(redis_key, status.id, status.id) if status.search_word_ban(keyword_filter.keyword)
               end
             end
           end
         end
       end
 
-      # Remove old first inserted status when the list size exceeds 400
-      redis.zremrangebyrank('banned_status_ids', 0, -401) if redis.zcard('banned_status_ids') > 400
-      puts "Banned status ids: #{redis.zrange('banned_status_ids', 0, -1)}"
+      # Combine banned status_ds both content & spam filters
+      # And also remove if the records exceeded 400 limit
+      combine_banned_status_ids
       true
     end
+
+    private
+
+      def combine_banned_status_ids
+        banned_status_keys = ['excluded_status_ids', 'content_filters_banned_status_ids', 'spam_filters_banned_status_ids']
+        redis.zunionstore(banned_status_keys[0], [banned_status_keys[1], banned_status_keys[2]] )
+
+        # Trim the combined list if it exceeds 400 items
+        banned_status_keys.each do |banned_status_key|
+          if redis.zcard(banned_status_key) > 400
+            redis.zremrangebyrank(banned_status_key, 0, -401)
+          end
+        end
+      end
+
   end
 end
