@@ -17,7 +17,6 @@ module ContentFilters::Concerns::FeedConcern
     def filter_and_cache_statuses(unhydrated)
       filter_service = ContentFilters::FeedService.new()
       banned_ids = filter_service.excluded_status_ids
-
       statuses = Status.where(id: unhydrated)
       statuses = statuses.where.not(id: banned_ids) if banned_ids.any?
       statuses

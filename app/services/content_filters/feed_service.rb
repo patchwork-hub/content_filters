@@ -16,7 +16,7 @@ module ContentFilters
       content_filter = ContentFilters::ServerSetting.where(name: "Content filters").last
       spam_filter = ContentFilters::ServerSetting.where(name: "Spam filters").last
     
-      return false unless content_filter && spam_filter
+      return [] unless content_filter && spam_filter
     
       if content_filter.value && spam_filter.value
         redis.zrange('excluded_status_ids', 0, -1)
