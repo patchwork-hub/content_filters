@@ -39,15 +39,14 @@ module ContentFilters
         end
       end
 
-      # Combine banned status_ds both content & spam filters
+      # Combine banned status_ids both content & spam filters
       # And also remove if the records exceeded 400 limit
-      combine_banned_status_ids
-      true
+      return combine_banned_status_ids(status_id)
     end
 
     private
 
-      def combine_banned_status_ids
+      def combine_banned_status_ids(status_id)
         banned_status_keys = ['excluded_status_ids', 'content_filters_banned_status_ids', 'spam_filters_banned_status_ids']
         redis.zunionstore(banned_status_keys[0], [banned_status_keys[1], banned_status_keys[2]] )
 
@@ -57,6 +56,10 @@ module ContentFilters
             redis.zremrangebyrank(banned_status_key, 0, -401)
           end
         end
+
+        return true if redis.zscore("excluded_status_ids", status_id)
+        false
+
       end
 
   end
