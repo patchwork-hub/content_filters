@@ -8,41 +8,58 @@ module ContentFilters
     def check_and_ban_status(status_id)
       setting_filter_types = ['Content filters', 'Spam filters']
 
-      with_read_replica do
-        setting_filter_types.each do |setting_filter_type|
+      @status = Status.find(status_id)
+      unless @status.sensitive?
+        with_read_replica do
+          setting_filter_types.each do |setting_filter_type|
 
-          # The keys wil generated as below
-          # 1.) content_filters_banned_status_ids
-          # 2.) span_filters_banned_status_ids
-          redis_key = "#{setting_filter_type.downcase.gsub(/\s+/, '_')}_banned_status_ids"
+            # The keys wil generated as below
+            # 1.) content_filters_banned_status_ids
+            # 2.) span_filters_banned_status_ids
+            redis_key = "#{setting_filter_type.downcase.gsub(/\s+/, '_')}_banned_status_ids"
 
-          server_setting = ContentFilters::ServerSetting.find_by(name: setting_filter_type)
-          next unless server_setting&.value
+            server_setting = ContentFilters::ServerSetting.find_by(name: setting_filter_type)
+            next unless server_setting&.value
 
-          keyword_filter_groups = ContentFilters::KeywordFilterGroup.includes(:keyword_filters)
-                                            .where(is_active: true, server_setting_id: server_setting.id)
+            keyword_filter_groups = ContentFilters::KeywordFilterGroup.includes(:keyword_filters)
+                                              .where(is_active: true, server_setting_id: server_setting.id)
 
-          keyword_filter_groups.each do |keyword_filter_group|
-            keyword_filter_group.keyword_filters.each do |keyword_filter|
-              keyword = keyword_filter.keyword.downcase
-              status = Status.find(status_id)
+            keyword_filter_groups.each do |keyword_filter_group|
+              keyword_filter_group.keyword_filters.each do |keyword_filter|
+                keyword = keyword_filter.keyword.downcase
 
-              if keyword_filter.hashtag? || keyword_filter.both?
-                tag_id = status.tags.where(name: keyword.gsub('#', '')).ids
-                redis.zadd(redis_key, status.id, status.id) if tag_id.present?
-              end
-              if keyword_filter.both? || keyword_filter.content?
-                redis.zadd(redis_key, status.id, status.id) if status.search_word_ban(keyword_filter.keyword)
+                if keyword_filter.hashtag? || keyword_filter.both?
+                  tag_id = @status.tags.where(name: keyword.gsub('#', '')).ids
+                  redis.zadd(redis_key, @status.id, @status.id) if tag_id.present?
+                end
+                if keyword_filter.both? || keyword_filter.content?
+                  redis.zadd(redis_key, @status.id, @status.id) if @status.search_word_ban(keyword_filter.keyword)
+                end
               end
             end
           end
         end
-      end
 
-      # Combine banned status_ids both content & spam filters
-      # And also remove if the records exceeded 400 limit
-      return combine_banned_status_ids(status_id)
+        # Combine banned status_ids both content & spam filters
+        # And also remove if the records exceeded 400 limit
+        return combine_banned_status_ids(status_id)
+      end
     end
+
+    def community_ban_status(status_id, community_id)
+      @status = Status.find(status_id)
+      filter_keywords = ContentFilters::CommunityFilterKeyword.where(patchwork_community_id: community_id)
+
+      filter_keywords.any? do |keyword|
+        if keyword.is_filter_hashtag
+          tag_id = @status.tags.where(name: keyword.keyword).ids
+          tag_id.present?
+        else
+          @status.search_word_ban(keyword.keyword)
+        end
+      end
+    end
+
 
     private
 
