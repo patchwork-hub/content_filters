@@ -58,7 +58,7 @@ module ContentFilters
           tag_id = @status.tags.where(name: keyword.keyword).ids
           tag_id.present?
         else
-          is_ban = @status.search_word_ban(keyword.keyword)
+          is_ban = @status.search_word_in_channel_status(keyword.keyword)
           Rails.logger.info "******check_and_ban_channel_status_is_ban****** #{is_ban}"
           is_ban
         end
