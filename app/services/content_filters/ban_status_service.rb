@@ -46,16 +46,21 @@ module ContentFilters
       end
     end
 
-    def community_ban_status(status_id, community_id)
+    def check_and_ban_channel_status(status_id, community_id)
       @status = Status.find(status_id)
+      Rails.logger.info "******check_and_ban_channel_status****** #{@status.text}"
       filter_keywords = ContentFilters::CommunityFilterKeyword.where(patchwork_community_id: community_id)
 
       filter_keywords.any? do |keyword|
+        Rails.logger.info "******check_and_ban_channel_status_KEYWORD****** #{keyword.keyword}"
+        Rails.logger.info "******check_and_ban_channel_status_is_filter_hashtag****** #{keyword.is_filter_hashtag}"
         if keyword.is_filter_hashtag
           tag_id = @status.tags.where(name: keyword.keyword).ids
           tag_id.present?
         else
-          @status.search_word_ban(keyword.keyword)
+          is_ban = @status.search_word_ban(keyword.keyword)
+          Rails.logger.info "******check_and_ban_channel_status_is_ban****** #{is_ban}"
+          is_ban
         end
       end
     end
