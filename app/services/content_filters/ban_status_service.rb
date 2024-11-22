@@ -33,7 +33,7 @@ module ContentFilters
                   redis.zadd(redis_key, @status.id, @status.id) if tag_id.present?
                 end
                 if keyword_filter.both? || keyword_filter.content?
-                  redis.zadd(redis_key, @status.id, @status.id) if @status.search_word_ban(keyword_filter.keyword)
+                  redis.zadd(redis_key, @status.id, @status.id) if @status.search_word_in_status(keyword_filter.keyword)
                 end
               end
             end
@@ -55,7 +55,7 @@ module ContentFilters
           tag_id = @status.tags.where(name: keyword.keyword).ids
           tag_id.present?
         else
-          @status.search_word_in_channel_status(keyword.keyword)
+          @status.search_word_in_status(keyword.keyword)
         end
       end
     end

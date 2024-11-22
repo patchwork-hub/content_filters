@@ -14,14 +14,8 @@ module ContentFilters::Concerns::StatusConcern
 
   end
 
-  def search_word_ban(keyword)
-    regex = /(?:^|\s)#{Regexp.escape(keyword)}(?:\s|[#,.]|(?=\z))/i
-    Rails.logger.info "*****Check_GLOBAL_STATUS_TEXT #{text}*****"
-    !!(text =~ regex)
-  end
-
-  def search_word_in_channel_status(keyword)
-    sanitized_text = text.gsub(/<br\s*\/?>/, ' ')
+  def search_word_in_status(keyword)
+    sanitized_text = text.gsub(/<br\s*\/?>/, ' ').gsub(/<\/?p>/, ' ')
     sanitized_text = ActionView::Base.full_sanitizer.sanitize(sanitized_text)
     Rails.logger.info "*****Check_STATUS_TEXT #{sanitized_text}*****"
     regex = /(?:^|\s)#{Regexp.escape(keyword)}(?:\s|[#,.]|(?=\z))/i
