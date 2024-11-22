@@ -16,6 +16,7 @@ module ContentFilters::Concerns::StatusConcern
 
   def search_word_ban(keyword)
     regex = /(?:^|\s)#{Regexp.escape(keyword)}(?:\s|[#,.]|(?=\z))/i
+    Rails.logger.info "*****Check_GLOBAL_STATUS_TEXT #{text}*****"
     !!(text =~ regex)
   end
 
