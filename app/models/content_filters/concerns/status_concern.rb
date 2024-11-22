@@ -22,6 +22,7 @@ module ContentFilters::Concerns::StatusConcern
   def search_word_in_channel_status(keyword)
     sanitized_text = text.gsub(/<br\s*\/?>/, ' ')
     sanitized_text = ActionView::Base.full_sanitizer.sanitize(sanitized_text)
+    Rails.logger.info "*****Check_STATUS_TEXT #{sanitized_text}*****"
     regex = /(?:^|\s)#{Regexp.escape(keyword)}(?:\s|[#,.]|(?=\z))/i
     !!(sanitized_text =~ regex)
   end
