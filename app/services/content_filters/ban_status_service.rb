@@ -46,9 +46,9 @@ module ContentFilters
       end
     end
 
-    def check_and_ban_channel_status(status_id, community_id)
+    def keyword_matches_in_status?(status_id, community_id, filter_type)
       @status = Status.find(status_id)
-      filter_keywords = ContentFilters::CommunityFilterKeyword.where(patchwork_community_id: community_id, filter_type: 'filter_out')
+      filter_keywords = ContentFilters::CommunityFilterKeyword.where(patchwork_community_id: community_id, filter_type: filter_type)
 
       filter_keywords.any? do |keyword|
         if keyword.is_filter_hashtag
@@ -59,7 +59,6 @@ module ContentFilters
         end
       end
     end
-
 
     private
 
