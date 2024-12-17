@@ -50,13 +50,11 @@ module ContentFilters
       @status = Status.find(status_id)
       filter_keywords = ContentFilters::CommunityFilterKeyword.where(patchwork_community_id: community_id, filter_type: filter_type)
 
+      return false if filter_type == 'filter_out' && filter_keywords.empty?
+      return true if filter_type == 'filter_in' && filter_keywords.empty?
+
       filter_keywords.any? do |keyword|
-        if keyword.is_filter_hashtag
-          tag_id = @status.tags.where(name: keyword.keyword).ids
-          tag_id.present?
-        else
-          @status.search_word_in_status(keyword.keyword)
-        end
+        keyword.is_filter_hashtag ? @status.tags.exists?(name: keyword.keyword) : @status.search_word_in_status(keyword.keyword)
       end
     end
 
