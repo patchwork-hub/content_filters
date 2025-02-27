@@ -16,24 +16,38 @@ module ContentFilters
           # 1.) content_filters_banned_status_ids
           # 2.) span_filters_banned_status_ids
           redis_key = "#{setting_filter_type.downcase.gsub(/\s+/, '_')}_banned_status_ids"
-
           server_setting = ContentFilters::ServerSetting.find_by(name: setting_filter_type)
           next unless server_setting&.value
 
-          keyword_filter_groups = ContentFilters::KeywordFilterGroup.includes(:keyword_filters)
-                                            .where(is_active: true, server_setting_id: server_setting.id)
+          # keyword_filter_groups = ContentFilters::KeywordFilterGroup.includes(:keyword_filters)
+          #                                   .where(is_active: true, server_setting_id: server_setting.id)
 
-          keyword_filter_groups.each do |keyword_filter_group|
-            keyword_filter_group.keyword_filters.each do |keyword_filter|
-              keyword = keyword_filter.keyword.downcase
+          # keyword_filter_groups.each do |keyword_filter_group|
+          #   keyword_filter_group.keyword_filters.each do |keyword_filter|
+          #     keyword = keyword_filter.keyword.downcase
 
-              if keyword_filter.hashtag? || keyword_filter.both?
-                tag_id = @status.tags.where(name: keyword.gsub('#', '')).ids
-                redis.zadd(redis_key, @status.id, @status.id) if tag_id.present?
-              end
-              if keyword_filter.both? || keyword_filter.content?
-                redis.zadd(redis_key, @status.id, @status.id) if @status.search_word_in_status(keyword_filter.keyword)
-              end
+          #     if keyword_filter.hashtag? || keyword_filter.both?
+          #       tag_id = @status.tags.where(name: keyword.gsub('#', '')).ids
+          #       redis.zadd(redis_key, @status.id, @status.id) if tag_id.present?
+          #     end
+          #     if keyword_filter.both? || keyword_filter.content?
+          #       redis.zadd(redis_key, @status.id, @status.id) if @status.search_word_in_status(keyword_filter.keyword)
+          #     end
+          #   end
+          # end
+
+          filters = redis.hgetall(redis_key_name(server_setting&.name)).values
+          active_filters = filters.map { |f| JSON.parse(f) }.select { |f| f['is_active'] }
+          active_filters.each do |f|
+            keyword = f['keyword']
+            filter_type = f['filter_type'].downcase
+            puts "***** keyword: #{keyword}, filter_type: #{filter_type}"
+            if filter_type == 'hashtag' || filter_type == 'both'
+              tag_id = @status.tags.where(name: keyword.downcase.gsub('#', '')).ids
+              redis.zadd(redis_key, @status.id, @status.id) if tag_id.present?
+            end
+            if filter_type == 'both' || filter_type == 'content'
+              redis.zadd(redis_key, @status.id, @status.id) if @status.search_word_in_status(keyword)
             end
           end
         end
@@ -74,5 +88,8 @@ module ContentFilters
 
       end
 
+      def redis_key_name(setting_name)
+        setting_name == 'Spam filters' ? 'channel:spam_filters' : 'channel:content_filters'
+      end
   end
 end
