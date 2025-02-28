@@ -85,11 +85,14 @@ module ContentFilters
 
         return true if redis.zscore("excluded_status_ids", status_id)
         false
-
       end
 
       def redis_key_name(setting_name)
-        setting_name == 'Spam filters' ? 'channel:spam_filters' : 'channel:content_filters'
+        if Rails.env.production?
+          setting_name == 'Spam filters' ? 'spam_filters' : 'content_filters'
+        else
+          setting_name == 'Spam filters' ? 'channel:spam_filters' : 'channel:content_filters'
+        end
       end
   end
 end
