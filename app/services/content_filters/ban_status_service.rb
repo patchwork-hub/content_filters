@@ -43,10 +43,12 @@ module ContentFilters
             filter_type = f['filter_type'].downcase
             puts "***** keyword: #{keyword}, filter_type: #{filter_type}"
             if filter_type == 'hashtag' || filter_type == 'both'
+              puts "***** [true both/hashtag] keyword: #{keyword.downcase.gsub('#', '')}, filter_type: #{filter_type}"
               tag_id = @status.tags.where(name: keyword.downcase.gsub('#', '')).ids
               redis.zadd(redis_key, @status.id, @status.id) if tag_id.present?
             end
             if filter_type == 'both' || filter_type == 'content'
+              puts "***** [true both/content] keyword: #{keyword}, filter_type: #{filter_type}"
               redis.zadd(redis_key, @status.id, @status.id) if @status.search_word_in_status(keyword)
             end
           end
