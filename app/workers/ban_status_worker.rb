@@ -7,6 +7,8 @@ class BanStatusWorker
     status = Status.find_by(id: status_id)
 
     is_status_banned = ContentFilters::BanStatusService.new.check_and_ban_status(status_id)
+
+    puts "***** [BanStatusWorker] status_id: #{status_id}, is_status_banned: #{is_status_banned}"
     
     # Channel admin reblog related sub-channles service
     ReblogChannelsService.new.call(status) if ENV.fetch('MAIN_CHANNEL', nil) != 'false' && ENV.fetch('MAIN_CHANNEL', nil) != nil && !is_status_banned
