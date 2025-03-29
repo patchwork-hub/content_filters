@@ -68,10 +68,12 @@ module ContentFilters
       return true if filter_type == 'filter_in' && filter_keywords.empty?
 
       filter_keywords.any? do |keyword|
-        Rails.logger.info "_____IS_FILTER_KEYWORD_#{keyword.keyword.downcase}_INCLUDE_IN_STATUS_#{@status.tags.map(&:name)} _____"
-
-        search_term = keyword.keyword.downcase
-        keyword.is_filter_hashtag ? @status.tags.exists?(name: search_term) : @status.search_word_in_status(keyword.keyword)
+        if keyword.is_filter_hashtag
+          search_term = keyword.keyword.downcase.strip
+          @status.tags.where("LOWER(name) = ?", search_term).present?
+        else
+          @status.search_word_in_status(keyword.keyword)
+        end
       end
     end
 
