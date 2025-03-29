@@ -68,7 +68,7 @@ module ContentFilters
       return true if filter_type == 'filter_in' && filter_keywords.empty?
 
       filter_keywords.any? do |keyword|
-        Rails.logger.info "___________IS_FILTER_KEYWORD_#{keyword}_INCLUDE_IN_STATUS_#{@status.tags.inspect} _____"
+        Rails.logger.info "___________IS_FILTER_KEYWORD_#{keyword.keyword}_INCLUDE_IN_STATUS_#{@status.tags.inspect} _____"
         keyword.is_filter_hashtag ? @status.tags.exists?(name: keyword.keyword) : @status.search_word_in_status(keyword.keyword)
       end
     end
