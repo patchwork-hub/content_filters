@@ -68,6 +68,7 @@ module ContentFilters
       return true if filter_type == 'filter_in' && filter_keywords.empty?
 
       filter_keywords.any? do |keyword|
+        p "***** Tags from status #{@status.tags} *****"
         keyword.is_filter_hashtag ? @status.tags.exists?(name: keyword.keyword) : @status.search_word_in_status(keyword.keyword)
       end
     end
