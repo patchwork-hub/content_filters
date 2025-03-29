@@ -69,7 +69,7 @@ module ContentFilters
 
       puts "***** FILTER_KEYWORDS #{filter_keywords.inspect} *****"
       filter_keywords.any? do |keyword|
-        puts "***** TAGS_FROM_STATUS #{@status.tags} *****"
+        puts "***** TAGS_FROM_STATUS #{@status.tags.inspect} *****"
         puts "***** IS_MUTE_KEYWORD_TAG_INCLUDE_IN_STATUS #{@status.tags.exists?(name: keyword.keyword)} *****"
         keyword.is_filter_hashtag ? @status.tags.exists?(name: keyword.keyword) : @status.search_word_in_status(keyword.keyword)
       end
