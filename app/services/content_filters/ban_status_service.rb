@@ -67,9 +67,10 @@ module ContentFilters
       return false if filter_type == 'filter_out' && filter_keywords.empty?
       return true if filter_type == 'filter_in' && filter_keywords.empty?
 
+      puts "***** FILTER_KEYWORDS #{filter_keywords.inspect} *****"
       filter_keywords.any? do |keyword|
-        p "***** TAGS_FROM_STATUS #{@status.tags} *****"
-        p "***** IS_MUTE_KEYWORD_TAG_INCLUDE_IN_STATUS #{@status.tags.exists?(name: keyword.keyword)} *****"
+        puts "***** TAGS_FROM_STATUS #{@status.tags} *****"
+        puts "***** IS_MUTE_KEYWORD_TAG_INCLUDE_IN_STATUS #{@status.tags.exists?(name: keyword.keyword)} *****"
         keyword.is_filter_hashtag ? @status.tags.exists?(name: keyword.keyword) : @status.search_word_in_status(keyword.keyword)
       end
     end
