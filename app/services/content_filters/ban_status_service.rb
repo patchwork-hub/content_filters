@@ -69,7 +69,7 @@ module ContentFilters
 
       filter_keywords.any? do |keyword|
         Rails.logger.info "_____IS_FILTER_KEYWORD_#{keyword.keyword}_INCLUDE_IN_STATUS_#{@status.tags.inspect} _____"
-        keyword.is_filter_hashtag ? @status.tags.exists?(['LOWER(name) = ?', keyword.keyword.downcase]) : @status.search_word_in_status(keyword.keyword)
+        keyword.is_filter_hashtag ? @status.tags.where("LOWER(name) = ?", keyword.keyword.downcase).exists? : @status.search_word_in_status(keyword.keyword)
       end
     end
 
