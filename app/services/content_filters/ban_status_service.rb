@@ -19,23 +19,6 @@ module ContentFilters
           server_setting = ContentFilters::ServerSetting.find_by(name: setting_filter_type)
           next unless server_setting&.value
 
-          # keyword_filter_groups = ContentFilters::KeywordFilterGroup.includes(:keyword_filters)
-          #                                   .where(is_active: true, server_setting_id: server_setting.id)
-
-          # keyword_filter_groups.each do |keyword_filter_group|
-          #   keyword_filter_group.keyword_filters.each do |keyword_filter|
-          #     keyword = keyword_filter.keyword.downcase
-
-          #     if keyword_filter.hashtag? || keyword_filter.both?
-          #       tag_id = @status.tags.where(name: keyword.gsub('#', '')).ids
-          #       redis.zadd(redis_key, @status.id, @status.id) if tag_id.present?
-          #     end
-          #     if keyword_filter.both? || keyword_filter.content?
-          #       redis.zadd(redis_key, @status.id, @status.id) if @status.search_word_in_status(keyword_filter.keyword)
-          #     end
-          #   end
-          # end
-
           filters = redis.hgetall(redis_key_name(server_setting&.name)).values
           active_filters = filters.map { |f| JSON.parse(f) }.select { |f| f['is_active'] }
           active_filters.each do |f|
@@ -65,9 +48,32 @@ module ContentFilters
       filter_keywords = ContentFilters::CommunityFilterKeyword.where(patchwork_community_id: community_id, filter_type: filter_type)
 
       return false if filter_type == 'filter_out' && filter_keywords.empty?
+
       return true if filter_type == 'filter_in' && filter_keywords.empty?
 
       filter_keywords.any? do |keyword|
+        if keyword.is_filter_hashtag
+          search_term = keyword.keyword.downcase.strip
+          @status.tags.where("LOWER(name) = ?", search_term).present?
+        else
+          @status.search_word_in_status(keyword.keyword)
+        end
+      end
+    end
+
+    def global_keyword_matches_in_status?(status_id, community_id, filter_type)
+      @status = Status.find(status_id)
+
+      cache_key = "global_filter_keywords_#{filter_type}"
+      global_filter_keywords = Rails.cache.fetch(cache_key, expires_in: 24.hours) do
+        ContentFilters::CommunityFilterKeyword.where(patchwork_community_id: nil, filter_type: filter_type).to_a
+      end
+
+      return false if filter_type == 'filter_out' && global_filter_keywords.empty?
+
+      return true if filter_type == 'filter_in' && global_filter_keywords.empty?
+
+      global_filter_keywords.any? do |keyword|
         if keyword.is_filter_hashtag
           search_term = keyword.keyword.downcase.strip
           @status.tags.where("LOWER(name) = ?", search_term).present?
