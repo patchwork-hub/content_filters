@@ -4,4 +4,6 @@ Rails.application.config.to_prepare do
     PublicFeed.prepend(ContentFilters::Concerns::PublicFeedConcern)
     Account.include(ContentFilters::Concerns::AccountConcern)
     User.include(ContentFilters::Concerns::UserConcern)
+    # StatusesIndex.prepend(ContentFilters::Concerns::StatusesIndexOverride)
+    # PublicStatusesIndex.prepend(ContentFilters::Concerns::PublicStatusesIndexOverride)
 end

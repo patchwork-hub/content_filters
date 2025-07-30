@@ -6,12 +6,25 @@ module ContentFilters::Concerns::StatusConcern
       where.not(account_id: account.excluded_domain_by_server_setting_federation)
     }
 
+    scope :without_banned, -> { where(statuses: { is_banned: false }) }
+
+    # Override the scope of Status::SearchConcern
+    scope :indexable, -> { without_reblogs.without_banned.public_visibility.joins(:account).where(account: { indexable: true }) }
+
     after_create_commit :filter_banned_keywords
+
+    # after_update_commit :reindex_status
 
     def filter_banned_keywords
       BanStatusWorker.perform_async(id)
     end
 
+    # def reindex_status
+    #   if saved_change_to_is_banned? && is_banned
+    #     update_index('statuses', :proper)
+    #     update_index('public_statuses', :proper)
+    #   end
+    # end
   end
 
   def search_word_in_status(keyword)

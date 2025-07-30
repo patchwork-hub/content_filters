@@ -8,10 +8,30 @@ class BanStatusWorker
 
     is_status_banned = ContentFilters::BanStatusService.new.check_and_ban_status(status_id)
 
-    puts "***** [BanStatusWorker] status_id: #{status_id}, is_status_banned: #{is_status_banned}"
-    
-    # Channel admin reblog related sub-channles service
-    ReblogChannelsService.new.call(status) if ENV.fetch('MAIN_CHANNEL', nil) != 'false' && ENV.fetch('MAIN_CHANNEL', nil) != nil && !is_status_banned
+    if is_status_banned
 
+      status.update!(
+        is_banned: is_status_banned,
+        updated_at: Time.current
+      )
+
+      if status.local?
+        status.update!(
+          sensitive: true,
+          spoiler_text: 'Sensitive content!!!'
+        )
+      end
+
+      puts "#{'>'*8}Status #{status_id} has been banned.#{'<'*8}"
+
+      # # Call `update_index` after the status is updated
+      # status.update_index('statuses', :proper)
+      # status.update_index('public_statuses', :proper)
+    else
+      # Channel admin reblog related sub-channles service
+      if ENV.fetch('MAIN_CHANNEL', nil) != 'false' && ENV.fetch('MAIN_CHANNEL', nil) != nil && !is_status_banned
+        ReblogChannelsService.new.call(status) 
+      end
+    end
   end
 end
