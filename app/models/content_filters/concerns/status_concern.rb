@@ -18,13 +18,6 @@ module ContentFilters::Concerns::StatusConcern
     def filter_banned_keywords
       BanStatusWorker.perform_async(id)
     end
-
-    # def reindex_status
-    #   if saved_change_to_is_banned? && is_banned
-    #     update_index('statuses', :proper)
-    #     update_index('public_statuses', :proper)
-    #   end
-    # end
   end
 
   def search_word_in_status(keyword)

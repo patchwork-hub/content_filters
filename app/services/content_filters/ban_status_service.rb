@@ -24,14 +24,24 @@ module ContentFilters
           active_filters.each do |f|
             keyword = f['keyword']
             filter_type = f['filter_type'].downcase
+
             if filter_type == 'hashtag' || filter_type == 'both'
-              tag_id = @status.tags.where(name: keyword.downcase.gsub('#', '')).ids
-              puts "***** [true both/hashtag] keyword: #{keyword.downcase.gsub('#', '')}, filter_type: #{filter_type}" if tag_id.present?
-              redis.zadd(redis_key, @status.id, @status.id) if tag_id.present?
+              tag_ids = @status.tags.where(name: keyword.downcase.gsub('#', '')).ids
+              if tag_ids.present?
+                # If the tag is banned, update its is_banned attribute to true
+                # to trigger update_tags callback for elastic search
+                with_primary do
+                  Tag.where(id: tag_ids).find_each do |tag|
+                    Rails.logger.info "#{'>'*8}Status: #{@status.id} & tag: #{tag.id} has been banned.#{'<'*8}"
+                    tag.update(is_banned: true)
+                  end
+                end
+                redis.zadd(redis_key, @status.id, @status.id)
+              end
             end
+
             if filter_type == 'both' || filter_type == 'content'
               include_keyword = @status.search_word_in_status(keyword)
-              puts "***** [true both/content] keyword: #{keyword}, filter_type: #{filter_type}" if include_keyword
               redis.zadd(redis_key, @status.id, @status.id) if include_keyword
             end
           end
