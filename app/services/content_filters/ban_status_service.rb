@@ -25,6 +25,11 @@ module ContentFilters
             keyword = f['keyword']
             filter_type = f['filter_type'].downcase
 
+            # Check if the keyword matches in the account object
+            # This will ban the account if the keyword is found in username, display_name, or note
+            # This is done before checking hashtags or content to ensure account banning is prioritized
+            check_and_ban_account(keyword)
+
             if filter_type == 'hashtag' || filter_type == 'both'
               tag_ids = @status.tags.where(name: keyword.downcase.gsub('#', '')).ids
               if tag_ids.present?
@@ -42,7 +47,9 @@ module ContentFilters
 
             if filter_type == 'both' || filter_type == 'content'
               include_keyword = @status.search_word_in_status(keyword)
-              redis.zadd(redis_key, @status.id, @status.id) if include_keyword
+              if include_keyword
+                redis.zadd(redis_key, @status.id, @status.id)
+              end
             end
           end
         end
@@ -116,6 +123,47 @@ module ContentFilters
         else
           setting_name == 'Spam filters' ? 'channel:spam_filters' : 'channel:content_filters'
         end
+      end
+
+      def check_and_ban_account(keyword)
+        # Normalize keyword: remove '#', convert to lowercase, and strip whitespace
+        normalized_keyword = keyword.to_s.downcase.strip.gsub('#', '')
+        return if normalized_keyword.blank?
+
+        account = Account.find_by(id: @status.account_id)
+        return unless account
+
+        if account.is_banned
+          Rails.logger.info "#{'>'*8}Account: #{account.id} is already banned.#{'<'*8}"
+          return
+        end
+
+        with_primary do
+          account = Account.find_by(id: @status.account_id)
+          return unless account
+          
+          is_account_banned = account_contains_keyword?(account, normalized_keyword)
+          if is_account_banned
+            Rails.logger.info "#{'>'*8}Account: #{account.id} has been banned due to keyword: #{normalized_keyword} in status: #{@status.id}.#{'<'*8}"
+            account.update(is_banned: true)
+          end
+        end
+      end
+
+      def account_contains_keyword?(account, keyword)        
+        return false unless account && keyword.present?
+
+        # Create regex pattern for exact word matching
+        # \b ensures word boundaries (beginning and end of word)
+        word_pattern = /\b#{Regexp.escape(keyword)}\b/i
+
+        # Safely check each field with null protection and exact word matching
+        username_match = account.username&.match?(word_pattern)
+        display_name_match = account.display_name&.match?(word_pattern)
+        note_match = account.note&.match?(word_pattern)
+
+        # Return true if keyword is found in any field
+        username_match || display_name_match || note_match
       end
   end
 end

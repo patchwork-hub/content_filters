@@ -13,8 +13,6 @@ module ContentFilters::Concerns::StatusConcern
 
     after_create_commit :filter_banned_keywords
 
-    # after_update_commit :reindex_status
-
     def filter_banned_keywords
       BanStatusWorker.perform_async(id)
     end

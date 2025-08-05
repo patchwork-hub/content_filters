@@ -6,7 +6,7 @@ module ContentFilters::Concerns::PublicStatusesIndexOverride
     index_scope ::Status.unscoped
                         .kept
                         .indexable
-                        .where(is_banned: false) # Add your custom condition
+                        .without_banned
                         .includes(:media_attachments, :preloadable_poll, :tags, preview_cards_status: :preview_card)
   end
 end
