@@ -19,7 +19,7 @@ module ContentFilters
           server_setting = ContentFilters::ServerSetting.find_by(name: setting_filter_type)
           next unless server_setting&.value
 
-          filters = redis.hgetall(redis_key_name(server_setting&.name)).values
+          filters = fetch_filters_from_all_keys(server_setting.name)
           active_filters = filters.map { |f| JSON.parse(f) }.select { |f| f['is_active'] }
           active_filters.each do |f|
             keyword = f['keyword']
@@ -117,12 +117,24 @@ module ContentFilters
         false
       end
 
-      def redis_key_name(setting_name)
-        if Rails.env.production?
-          setting_name == 'Spam filters' ? 'spam_filters' : 'content_filters'
+      def fetch_filters_from_all_keys(setting_name)
+        # Get all possible key formats for the setting
+        production_key = setting_name == 'Spam filters' ? 'spam_filters' : 'content_filters'
+        development_key = setting_name == 'Spam filters' ? 'channel:spam_filters' : 'channel:content_filters'
+        
+        all_filters = []
+        
+        # Check production key format first
+        production_filters = redis.hgetall(production_key).values
+        if production_filters.any?
+          all_filters.concat(production_filters)
         else
-          setting_name == 'Spam filters' ? 'channel:spam_filters' : 'channel:content_filters'
+          # If production key is empty, check development/channel key format
+          development_filters = redis.hgetall(development_key).values
+          all_filters.concat(development_filters) if development_filters.any?
         end
+        
+        all_filters
       end
 
       def check_and_ban_account(keyword)
