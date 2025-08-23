@@ -79,7 +79,7 @@ namespace :content_filters do
         if tags_to_ban.any?
           begin
             Tag.where(id: tags_to_ban).find_each do |tag|
-              tag.update!(is_banned: true)
+              tag.update!(listable: false, trendable: false)
               banned_count += 1
             end
             puts "Batch updated #{tags_to_ban.size} tags to banned status"
@@ -91,7 +91,7 @@ namespace :content_filters do
             tags_to_ban.each do |tag_id|
               begin
                 tag = Tag.find(tag_id)
-                tag.update!(is_banned: true)
+                tag.update!(listable: false, trendable: false)
                 banned_count += 1
               rescue => e
                 error_count += 1
@@ -256,11 +256,11 @@ namespace :content_filters do
       puts "Resetting banned status for all tags..."
       
       begin
-        count = Tag.where(is_banned: true).count
+        count = Tag.where(  ).count
         puts "Found #{count} banned tags to reset"
-        
-        Tag.where(is_banned: true).find_in_batches(batch_size: 1000) do |batch|
-          batch.each { |tag| tag.update!(is_banned: false) }
+
+        Tag.where(usable: true, listable: true, trendable: true).find_in_batches(batch_size: 1000) do |batch|
+          batch.each { |tag| tag.update!(usable: false, listable: false, trendable: false) }
           puts "Reset #{batch.size} tags..."
         end
         

@@ -38,7 +38,7 @@ module ContentFilters
                 with_primary do
                   Tag.where(id: tag_ids).find_each do |tag|
                     Rails.logger.info "#{'>'*8}Status: #{@status.id} & tag: #{tag.id} has been banned.#{'<'*8}"
-                    tag.update(is_banned: true)
+                    tag.update(listable: false, trendable: false)
                   end
                 end
                 redis.zadd(redis_key, @status.id, @status.id)
