@@ -30,61 +30,44 @@ class BanTagWorker
       banned_count = 0
       error_count = 0
       processed_count = 0
-      batch_size = 1000
-      
+
       # Use select to only load necessary columns for better performance
       total_tags = Tag.count
-      Rails.logger.info "Checking #{total_tags} tags in batches of #{batch_size}..."
+      Rails.logger.info "Checking #{total_tags} tags..."
 
-      # Process tags in batches with transaction for better performance
-      Tag.select(:id, :name, :display_name, :listable, :trendable).find_in_batches(batch_size: batch_size) do |tag_batch|
-        # Collect all tag IDs that need to be banned in this batch
-        tags_to_ban = []
-        
-        tag_batch.each do |tag|
-          processed_count += 1
-          
-            begin
-            # Skip only when both listable and trendable are explicitly false.
-            # Proceed if either attribute is nil or true.
-            next if tag.listable == false && tag.trendable == false
-            
-            tag_matched = false
-            
-            # Performance optimized: Check exact match first, then substring
-            tag_name_lower = tag.name.downcase.strip
-            if filter_keywords.include?(tag_name_lower)
-              tag_matched = true
-            elsif filter_keywords.any? { |keyword| tag_name_lower.include?(keyword) }
-              tag_matched = true
-            end
-            
-            # Check display_name if exists and not already matched
-            if !tag_matched && tag.respond_to?(:display_name) && tag.display_name.present?
-              display_name_lower = tag.display_name.downcase.strip
-              if filter_keywords.include?(display_name_lower)
-                tag_matched = true
-              elsif filter_keywords.any? { |keyword| display_name_lower.include?(keyword) }
-                tag_matched = true
-              end
-            end
-            
-            if tag_matched
-              tags_to_ban << tag.id
-              Rails.logger.info "Found tag to ban: '#{tag.name}' (ID: #{tag.id})"
-            end
-            
-          rescue => e
-            error_count += 1
-            Rails.logger.error "Error processing tag ID #{tag.id}: #{e.message}"
-            Rails.logger.error "Error in update_banned_tags for tag #{tag.id}: #{e.message}\n#{e.backtrace.join("\n")}"
+      # Iterate all tags without specifying an explicit batch_size (ActiveRecord will use defaults)
+      Tag.select(:id, :name, :display_name, :listable, :trendable).find_each do |tag|
+        processed_count += 1
+
+        begin
+          # Skip only when both listable and trendable are explicitly false.
+          # Proceed if either attribute is nil or true.
+          next if tag.listable == false && tag.trendable == false
+
+          tag_matched = false
+
+          # Performance optimized: Check exact match first, then substring
+          tag_name_lower = tag.name.downcase.strip
+          if filter_keywords.include?(tag_name_lower)
+            tag_matched = true
+          elsif filter_keywords.any? { |keyword| tag_name_lower.include?(keyword) }
+            tag_matched = true
           end
-        end
-        
-        # Batch update for better performance
-        if tags_to_ban.any?
-          begin
-            Tag.where(id: tags_to_ban).find_each do |tag|
+
+          # Check display_name if exists and not already matched
+          if !tag_matched && tag.respond_to?(:display_name) && tag.display_name.present?
+            display_name_lower = tag.display_name.downcase.strip
+            if filter_keywords.include?(display_name_lower)
+              tag_matched = true
+            elsif filter_keywords.any? { |keyword| display_name_lower.include?(keyword) }
+              tag_matched = true
+            end
+          end
+
+          if tag_matched
+            Rails.logger.info "Found tag to ban: '#{tag.name}' (ID: #{tag.id})"
+
+            begin
               tag.update!(listable: false, trendable: false)
 
               tag.statuses.each do |status|
@@ -101,29 +84,23 @@ class BanTagWorker
                 end
               end
 
-            banned_count += 1
-          end
-            Rails.logger.info "Batch updated #{tags_to_ban.size} tags to banned status"
-          rescue => e
-            Rails.logger.error "Error in batch update: #{e.message}"
-            Rails.logger.error "Batch update error in update_banned_tags: #{e.message}\n#{e.backtrace.join("\n")}"
-            
-            # Fallback to individual updates
-            tags_to_ban.each do |tag_id|
-              begin
-                tag = Tag.find(tag_id)
-                tag.update!(listable: false, trendable: false)
-                banned_count += 1
-              rescue => e
-                error_count += 1
-                Rails.logger.error "Error updating tag ID #{tag_id}: #{e.message}"
-              end
+              banned_count += 1
+            rescue => e
+              error_count += 1
+              Rails.logger.error "Error updating tag ID #{tag.id}: #{e.message}"
             end
           end
+
+        rescue => e
+          error_count += 1
+          Rails.logger.error "Error processing tag ID #{tag.id}: #{e.message}"
+          Rails.logger.error "Error in update_banned_tags for tag #{tag.id}: #{e.message}\n#{e.backtrace.join("\n") }"
         end
-        
-        # Progress update
-        Rails.logger.info "Processed #{processed_count}/#{total_tags} tags (#{(processed_count.to_f / total_tags * 100).round(2)}%)"
+
+        # Periodic progress logging every 1000 processed tags
+        if (processed_count % 1000).zero?
+          Rails.logger.info "Processed #{processed_count}/#{total_tags} tags (#{(processed_count.to_f / total_tags * 100).round(2)}%)"
+        end
       end
       
       end_time = Time.current
