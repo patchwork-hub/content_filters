@@ -37,7 +37,6 @@ module ContentFilters
                 # to trigger update_tags callback for elastic search
                 with_primary do
                   Tag.where(id: tag_ids).find_each do |tag|
-                    Rails.logger.info "#{'>'*8}Status: #{@status.id} & tag: #{tag.id} has been banned.#{'<'*8}"
                     tag.update(listable: false, trendable: false)
                   end
                 end
@@ -146,7 +145,6 @@ module ContentFilters
         return unless account
 
         if account.is_banned
-          Rails.logger.info "#{'>'*8}Account: #{account.id} is already banned.#{'<'*8}"
           return
         end
 
@@ -156,7 +154,6 @@ module ContentFilters
           
           is_account_banned = account_contains_keyword?(account, normalized_keyword)
           if is_account_banned
-            Rails.logger.info "#{'>'*8}Account: #{account.id} has been banned due to keyword: #{normalized_keyword} in status: #{@status.id}.#{'<'*8}"
             account.update(is_banned: true)
           end
         end

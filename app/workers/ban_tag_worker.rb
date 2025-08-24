@@ -44,8 +44,10 @@ class BanTagWorker
         tag_batch.each do |tag|
           processed_count += 1
           
-          begin
-            next unless tag.listable && tag.trendable # Skip already banned tags
+            begin
+            # Skip only when both listable and trendable are explicitly false.
+            # Proceed if either attribute is nil or true.
+            next if tag.listable == false && tag.trendable == false
             
             tag_matched = false
             

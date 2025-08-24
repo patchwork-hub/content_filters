@@ -22,8 +22,6 @@ class BanStatusWorker
         )
       end
 
-      Rails.logger.info "#{'>'*8}Status #{status_id} has been banned.#{'<'*8}"
-
       # # Call `update_index` after the status is updated
       # status.update_index('statuses', :proper)
       # status.update_index('public_statuses', :proper)
