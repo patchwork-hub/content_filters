@@ -5,7 +5,7 @@ class BanTagWorker
 
   def perform()
     start_time = Time.current
-    puts "Starting to check tags against keyword filters at #{start_time}..."
+    Rails.logger.info "Starting to check tags against keyword filters at #{start_time}..."
     
     begin
       # Get all keyword filters of type hashtag or both
@@ -14,12 +14,12 @@ class BanTagWorker
       community_keyword_filters = ContentFilters::CommunityFilterKeyword.where(patchwork_community_id: nil, is_filter_hashtag: true, filter_type: 'filter_out')
 
       if keyword_filters.empty? && community_keyword_filters.empty?
-        puts "No hashtag or both type keyword filters found. Exiting."
+        Rails.logger.info "No hashtag or both type keyword filters found. Exiting."
         return
       end
 
       # Report counts for visibility
-      puts "Found #{keyword_filters.count} keyword filters and #{community_keyword_filters.count} community keyword filters to check against"
+      Rails.logger.info "Found #{keyword_filters.count} keyword filters and #{community_keyword_filters.count} community keyword filters to check against"
 
       # Combine keywords from both sources and remove duplicates
       combined_keywords = keyword_filters.pluck(:keyword) + community_keyword_filters.pluck(:keyword)
@@ -34,8 +34,8 @@ class BanTagWorker
       
       # Use select to only load necessary columns for better performance
       total_tags = Tag.count
-      puts "Checking #{total_tags} tags in batches of #{batch_size}..."
-      
+      Rails.logger.info "Checking #{total_tags} tags in batches of #{batch_size}..."
+
       # Process tags in batches with transaction for better performance
       Tag.select(:id, :name, :display_name, :listable, :trendable).find_in_batches(batch_size: batch_size) do |tag_batch|
         # Collect all tag IDs that need to be banned in this batch
@@ -69,12 +69,12 @@ class BanTagWorker
             
             if tag_matched
               tags_to_ban << tag.id
-              puts "Found tag to ban: '#{tag.name}' (ID: #{tag.id})"
+              Rails.logger.info "Found tag to ban: '#{tag.name}' (ID: #{tag.id})"
             end
             
           rescue => e
             error_count += 1
-            puts "Error processing tag ID #{tag.id}: #{e.message}"
+            Rails.logger.error "Error processing tag ID #{tag.id}: #{e.message}"
             Rails.logger.error "Error in update_banned_tags for tag #{tag.id}: #{e.message}\n#{e.backtrace.join("\n")}"
           end
         end
@@ -101,9 +101,9 @@ class BanTagWorker
 
             banned_count += 1
           end
-            puts "Batch updated #{tags_to_ban.size} tags to banned status"
+            Rails.logger.info "Batch updated #{tags_to_ban.size} tags to banned status"
           rescue => e
-            puts "Error in batch update: #{e.message}"
+            Rails.logger.error "Error in batch update: #{e.message}"
             Rails.logger.error "Batch update error in update_banned_tags: #{e.message}\n#{e.backtrace.join("\n")}"
             
             # Fallback to individual updates
@@ -114,31 +114,30 @@ class BanTagWorker
                 banned_count += 1
               rescue => e
                 error_count += 1
-                puts "Error updating tag ID #{tag_id}: #{e.message}"
-                Rails.logger.error "Individual update error for tag #{tag_id}: #{e.message}"
+                Rails.logger.error "Error updating tag ID #{tag_id}: #{e.message}"
               end
             end
           end
         end
         
         # Progress update
-        puts "Processed #{processed_count}/#{total_tags} tags (#{(processed_count.to_f / total_tags * 100).round(2)}%)"
+        Rails.logger.info "Processed #{processed_count}/#{total_tags} tags (#{(processed_count.to_f / total_tags * 100).round(2)}%)"
       end
       
       end_time = Time.current
       duration = (end_time - start_time).round(2)
-      
-      puts "\n" + "="*50
-      puts "SUMMARY:"
-      puts "Total tags processed: #{processed_count}"
-      puts "Tags updated to banned: #{banned_count}"
-      puts "Errors encountered: #{error_count}"
-      puts "Duration: #{duration} seconds"
-      puts "Average: #{(processed_count.to_f / duration).round(2)} tags/second"
-      puts "="*50
-      
+
+      Rails.logger.info "\n" + "="*50
+      Rails.logger.info "SUMMARY:"
+      Rails.logger.info "Total tags processed: #{processed_count}"
+      Rails.logger.info "Tags updated to banned: #{banned_count}"
+      Rails.logger.info "Errors encountered: #{error_count}"
+      Rails.logger.info "Duration: #{duration} seconds"
+      Rails.logger.info "Average: #{(processed_count.to_f / duration).round(2)} tags/second"
+      Rails.logger.info "="*50
+
     rescue => e
-      puts "Fatal error in update_banned_tags: #{e.message}"
+      Rails.logger.error "Fatal error in update_banned_tags: #{e.message}"
       Rails.logger.error "Fatal error in update_banned_tags: #{e.message}\n#{e.backtrace.join("\n")}"
       raise
     end
