@@ -34,7 +34,7 @@ class StatusBannedWorker
       # Use select to only load necessary columns for better performance
       # Only check statuses that are not already banned
       statuses_scope = Status.where(is_banned: [false, nil]).where('text IS NOT NULL AND text != ?', '').select(:id, :text, :is_banned, :local, :sensitive, :spoiler_text, :updated_at)
-      total_statuses = statuses_scope.count
+      total_statuses = statuses_scope.size
       Rails.logger.info "Checking #{total_statuses} non-banned statuses..."
 
       # Iterate all non-banned statuses

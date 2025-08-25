@@ -34,7 +34,7 @@ class AccountBannedWorker
       # Use select to only load necessary columns for better performance
       # Only check accounts that are not already banned
       accounts_scope = Account.where(is_banned: [false, nil]).select(:id, :username, :display_name, :note, :is_banned)
-      total_accounts = accounts_scope.count
+      total_accounts = accounts_scope.size
       Rails.logger.info "Checking #{total_accounts} non-banned accounts..."
 
       # Iterate all non-banned accounts
