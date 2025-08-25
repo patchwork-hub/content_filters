@@ -169,10 +169,23 @@ module ContentFilters
         # Safely check each field with null protection and exact word matching
         username_match = account.username&.match?(word_pattern)
         display_name_match = account.display_name&.match?(word_pattern)
-        note_match = account.note&.match?(word_pattern)
+        note_match = account_note(account)&.match?(word_pattern)
 
         # Return true if keyword is found in any field
         username_match || display_name_match || note_match
+      end
+
+      def account_note(account)
+        if account.note&.include?('<') && account.note&.include?('>')
+          # Strip HTML tags and normalize
+          note_text = ActionView::Base.full_sanitizer.sanitize(account.note)
+          note_lower = note_text.downcase.strip
+        else
+          # Pure string, no HTML sanitization needed
+          note_lower = account.note.downcase.strip
+        end
+
+        note_lower
       end
   end
 end

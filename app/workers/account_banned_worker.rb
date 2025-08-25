@@ -33,7 +33,7 @@ class AccountBannedWorker
 
       # Use select to only load necessary columns for better performance
       # Only check accounts that are not already banned
-      accounts_scope = Account.where(is_banned: [false, nil]).select(:id, :username, :display_name, :note, :is_banned)
+      accounts_scope = Account.where(is_banned: [false, nil])
       total_accounts = accounts_scope.size
       Rails.logger.info "Checking #{total_accounts} non-banned accounts..."
 
@@ -47,29 +47,66 @@ class AccountBannedWorker
           # Check username
           if account.username.present?
             username_lower = account.username.downcase.strip
-            if filter_keywords.include?(username_lower)
-              account_matched = true
-            elsif filter_keywords.any? { |keyword| username_lower.include?(keyword) }
+            
+            # Check for exact word matches using word boundaries
+            matched_keyword = filter_keywords.find do |keyword|
+              # Use word boundary regex to match exact words only
+              regex = /\b#{Regexp.escape(keyword)}\b/i
+              username_lower.match?(regex)
+            end
+            
+            if matched_keyword
+              Rails.logger.info "Exact word match '#{matched_keyword}' found in username: '#{username_lower}' for account '#{account.id}'"
               account_matched = true
             end
           end
 
           # Check display_name if not already matched
           if !account_matched && account.display_name.present?
-            display_name_lower = account.display_name.downcase.strip
-            if filter_keywords.include?(display_name_lower)
-              account_matched = true
-            elsif filter_keywords.any? { |keyword| display_name_lower.include?(keyword) }
+            # Check if display_name contains HTML tags
+            if account.display_name.include?('<') && account.display_name.include?('>')
+              # Strip HTML tags and normalize
+              display_name_text = ActionView::Base.full_sanitizer.sanitize(account.display_name)
+              display_name_lower = display_name_text.downcase.strip
+            else
+              # Pure string, no HTML sanitization needed
+              display_name_lower = account.display_name.downcase.strip
+            end
+            
+            # Check for exact word matches using word boundaries
+            matched_keyword = filter_keywords.find do |keyword|
+              # Use word boundary regex to match exact words only
+              regex = /\b#{Regexp.escape(keyword)}\b/i
+              display_name_lower.match?(regex)
+            end
+            
+            if matched_keyword
+              Rails.logger.info "Exact word match '#{matched_keyword}' found in display_name: '#{display_name_lower}' for account '#{account.id}'"
               account_matched = true
             end
           end
 
           # Check note if not already matched
           if !account_matched && account.note.present?
-            note_lower = account.note.downcase.strip
-            if filter_keywords.include?(note_lower)
-              account_matched = true
-            elsif filter_keywords.any? { |keyword| note_lower.include?(keyword) }
+            # Check if note contains HTML tags
+            if account.note.include?('<') && account.note.include?('>')
+              # Strip HTML tags and normalize
+              note_text = ActionView::Base.full_sanitizer.sanitize(account.note)
+              note_lower = note_text.downcase.strip
+            else
+              # Pure string, no HTML sanitization needed
+              note_lower = account.note.downcase.strip
+            end
+            
+            # Check for exact word matches using word boundaries
+            matched_keyword = filter_keywords.find do |keyword|
+              # Use word boundary regex to match exact words only
+              regex = /\b#{Regexp.escape(keyword)}\b/i
+              note_lower.match?(regex)
+            end
+            
+            if matched_keyword
+              Rails.logger.info "Exact word match '#{matched_keyword}' found in note: '#{note_lower}' for account '#{account.id}'"
               account_matched = true
             end
           end
@@ -78,7 +115,7 @@ class AccountBannedWorker
             Rails.logger.info "Found account to ban: '#{account.username}' (ID: #{account.id}, Display: '#{account.display_name}')"
 
             begin
-              account.update!(is_banned: true)
+              account.update(is_banned: true)
 
               account.statuses.each do |status|
                 status.update!(
