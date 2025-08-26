@@ -44,19 +44,25 @@ class AccountBannedWorker
         begin
           account_matched = false
 
-          # Check username
-          if account.username.present?
-            username_lower = account.username.downcase.strip
-            
-            # Check for exact word matches using word boundaries
-            matched_keyword = filter_keywords.find do |keyword|
-              # Use word boundary regex to match exact words only
-              regex = /\b#{Regexp.escape(keyword)}\b/i
-              username_lower.match?(regex)
+          if account.domain.present?
+            domain_lower = account.domain.downcase.strip
+
+            # Check if any filter keyword is included in the domain (substring match)
+            if filter_keywords.include?(domain_lower)
+              account_matched = true
+            elsif filter_keywords.any? { |keyword| domain_lower.include?(keyword) }
+              account_matched = true
             end
-            
-            if matched_keyword
-              Rails.logger.info "Exact word match '#{matched_keyword}' found in username: '#{username_lower}' for account '#{account.id}'"
+          end
+
+          # Check username
+          if !account_matched && account.username.present?
+            username_lower = account.username.downcase.strip
+
+            # Check if any filter keyword is included in the username (substring match)
+            if filter_keywords.include?(username_lower)
+              account_matched = true
+            elsif filter_keywords.any? { |keyword| username_lower.include?(keyword) }
               account_matched = true
             end
           end
