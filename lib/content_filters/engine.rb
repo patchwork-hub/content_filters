@@ -18,5 +18,23 @@ module ContentFilters
 
       config.autoload_paths << File.expand_path("../app/services", __FILE__)
       config.autoload_paths << File.expand_path("../app/workers", __FILE__)
+
+      rake_tasks do
+        namespace :content_filters do
+          # desc "Copies migrations from ContentFilters engine"
+          # task :migrations do
+          # Rake::Task["railties:install:migrations"].invoke
+          # end
+
+          desc "Installs the ContentFilters engine"
+          task setup: :environment do
+            puts "Running ContentFilters installation tasks..."
+            task :without_env do
+              Rake::Task["content_filters:install:"].invoke
+            end
+          end
+        end
+      end
+
     end
   end
