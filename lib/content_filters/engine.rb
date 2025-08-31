@@ -39,9 +39,6 @@ module ContentFilters
           arg.match?(/\A(generate|g|rake|db:|assets:|routes|notes|stats|middleware|runner|destroy)\b/)
         }
         
-        # Skip if running specific Rails commands
-        next if $0.match?(/\b(rake|rails)\z/)
-        
         # Only check when starting the web server
         next unless ARGV.empty? || ARGV.any? { |arg| arg.match?(/\A(server|s)\z/) }
         
