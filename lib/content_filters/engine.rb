@@ -25,5 +25,41 @@ module ContentFilters
 
       # Add generator paths
       config.generators.templates_path = File.expand_path('../generators/templates', __dir__)
+
+      # Enforce generator execution before app startup
+      initializer 'content_filters.enforce_generator_execution', before: :load_config_initializers do |app|
+        # Only enforce in non-test environments and when Rails is fully loaded
+        next if Rails.env.test? || defined?(Rails::Console)
+        
+        marker_file = app.root.join('.content_filters_installed')
+        
+        unless marker_file.exist?
+          error_message = <<~ERROR
+          
+            ================================================================
+            CONTENT FILTERS SETUP REQUIRED
+            ================================================================
+            
+            The content_filters gem requires initial setup before the 
+            application can start.
+            
+            Please run the following command:
+            
+              rails generate content_filters:install
+            
+            This will install required Chewy index files and configure
+            the content filtering system.
+            
+            ================================================================
+            
+          ERROR
+          
+          Rails.logger.error(error_message) if Rails.logger
+          puts error_message
+          
+          # Prevent the application from starting
+          raise "Content filters setup required. Run: rails generate content_filters:install"
+        end
+      end
     end
   end

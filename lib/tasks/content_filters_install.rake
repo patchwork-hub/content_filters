@@ -17,6 +17,12 @@ namespace :content_filters do
     
     # Copy files
     if Dir.exist?(source_path)
+
+      # Create marker file when run via rake
+      marker_file = Rails.root.join('.content_filters_installed')
+      File.write(marker_file, "Content filters installed via rake at #{Time.current}\n")
+      puts "Created installation marker file."
+
       puts "Copying Chewy index files from content_filters gem..."
       
       # Find all files in the source directory
