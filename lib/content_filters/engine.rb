@@ -23,20 +23,15 @@ module ContentFilters
         g.test_framework :rspec
       end
 
-      # Add generator paths
-      config.generators.templates_path = File.expand_path('../generators/templates', __dir__)
-
-      # Enforce generator execution before app startup - IMPROVED VERSION
-      initializer 'content_filters.enforce_generator_execution', before: :load_environment_config do |app|
+      # Enforce rake task execution before app startup
+      initializer 'content_filters.enforce_rake_execution', before: :load_environment_config do |app|
         # Only enforce in specific environments and contexts
         next if Rails.env.test?
         next if defined?(Rails::Console)
-        next if defined?(Rails::Command::GenerateCommand)
-        next if defined?(Rails::Command::RakeCommand)
         
-        # Check if we're running generators or rake tasks
+        # Check if we're running rake tasks or other commands
         next if ARGV.any? { |arg| 
-          arg.match?(/\A(generate|g|rake|db:|assets:|routes|notes|stats|middleware|runner|destroy)\b/)
+          arg.match?(/\A(rake|db:|assets:|routes|notes|stats|middleware|runner|generate|g|destroy)\b/)
         }
         
         # Only check when starting the web server
@@ -56,7 +51,7 @@ module ContentFilters
             
             Please run the following command:
             
-              rails generate content_filters:install
+              bundle exec rake content_filters:install
             
             This will copy required Chewy index files and configure
             the content filtering system.

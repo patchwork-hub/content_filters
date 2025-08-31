@@ -17,12 +17,6 @@ namespace :content_filters do
     
     # Copy files
     if Dir.exist?(source_path)
-
-      # Create marker file when run via rake
-      marker_file = Rails.root.join('.content_filters_installed')
-      File.write(marker_file, "Content filters installed via rake at #{Time.current}\n")
-      puts "Created installation marker file."
-
       puts "Copying Chewy index files from content_filters gem..."
       
       # Find all files in the source directory
@@ -36,8 +30,61 @@ namespace :content_filters do
       end
       
       puts "Chewy index files have been successfully copied to #{destination_path}/"
+      
+      # Create marker file after successful installation
+      create_marker_file
+      
+      # Add marker file to .gitignore
+      add_to_gitignore
+      
+      puts "Content filters installation completed successfully!"
+      puts "Your Rails application can now start normally."
+      
     else
       puts "Error: Source directory #{source_path} not found!"
+      exit(1)
+    end
+  end
+  
+  private
+  
+  def create_marker_file
+    marker_path = Rails.root.join('.content_filters_installed')
+    File.write(marker_path, <<~CONTENT)
+      # This file indicates that content_filters has been installed
+      # Generated at: #{Time.current}
+      # Do not delete this file unless you want to re-run the installation
+    CONTENT
+    puts "Created installation marker file: .content_filters_installed"
+  end
+  
+  def add_to_gitignore
+    gitignore_path = Rails.root.join('.gitignore')
+    marker_entry = '.content_filters_installed'
+    
+    # Check if .gitignore exists
+    if File.exist?(gitignore_path)
+      gitignore_content = File.read(gitignore_path)
+      
+      # Check if the entry is already in .gitignore
+      unless gitignore_content.include?(marker_entry)
+        puts "Adding #{marker_entry} to .gitignore"
+        
+        # Add a comment and the entry to .gitignore
+        File.open(gitignore_path, 'a') do |file|
+          file.puts ""
+          file.puts "# Content filters installation marker"
+          file.puts marker_entry
+        end
+      else
+        puts "#{marker_entry} already exists in .gitignore"
+      end
+    else
+      puts "Creating .gitignore and adding #{marker_entry}"
+      File.write(gitignore_path, <<~GITIGNORE)
+        # Content filters installation marker
+        #{marker_entry}
+      GITIGNORE
     end
   end
 end
