@@ -10,6 +10,9 @@ module ContentFilters
         # Create marker file FIRST to prevent race conditions
         create_marker_file
         
+        # Add marker file to .gitignore
+        add_to_gitignore
+        
         # Run the install rake task
         rake "content_filters:install"
         
@@ -26,6 +29,36 @@ module ContentFilters
           # Generated at: #{Time.current}
           # Do not delete this file unless you want to re-run the generator
         CONTENT
+      end
+      
+      def add_to_gitignore
+        gitignore_path = Rails.root.join('.gitignore')
+        marker_entry = '.content_filters_installed'
+        
+        # Check if .gitignore exists
+        if File.exist?(gitignore_path)
+          gitignore_content = File.read(gitignore_path)
+          
+          # Check if the entry is already in .gitignore
+          unless gitignore_content.include?(marker_entry)
+            say "Adding #{marker_entry} to .gitignore", :yellow
+            
+            # Add a comment and the entry to .gitignore
+            append_to_file gitignore_path, <<~GITIGNORE
+              
+              # Content filters installation marker
+              #{marker_entry}
+            GITIGNORE
+          else
+            say "#{marker_entry} already exists in .gitignore", :blue
+          end
+        else
+          say "Creating .gitignore and adding #{marker_entry}", :yellow
+          create_file gitignore_path, <<~GITIGNORE
+            # Content filters installation marker
+            #{marker_entry}
+          GITIGNORE
+        end
       end
     end
   end
