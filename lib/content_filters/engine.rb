@@ -26,16 +26,30 @@ module ContentFilters
       # Add generator paths
       config.generators.templates_path = File.expand_path('../generators/templates', __dir__)
 
-      # Enforce generator execution before app startup
-      initializer 'content_filters.enforce_generator_execution', before: :load_config_initializers do |app|
-        # Only enforce in non-test environments and when Rails is fully loaded
-        next if Rails.env.test? || defined?(Rails::Console)
+      # Enforce generator execution before app startup - IMPROVED VERSION
+      initializer 'content_filters.enforce_generator_execution', before: :load_environment_config do |app|
+        # Only enforce in specific environments and contexts
+        next if Rails.env.test?
+        next if defined?(Rails::Console)
+        next if defined?(Rails::Command::GenerateCommand)
+        next if defined?(Rails::Command::RakeCommand)
+        
+        # Check if we're running generators or rake tasks
+        next if ARGV.any? { |arg| 
+          arg.match?(/\A(generate|g|rake|db:|assets:|routes|notes|stats|middleware|runner|destroy)\b/)
+        }
+        
+        # Skip if running specific Rails commands
+        next if $0.match?(/\b(rake|rails)\z/)
+        
+        # Only check when starting the web server
+        next unless ARGV.empty? || ARGV.any? { |arg| arg.match?(/\A(server|s)\z/) }
         
         marker_file = app.root.join('.content_filters_installed')
         
         unless marker_file.exist?
           error_message = <<~ERROR
-          
+        
             ================================================================
             CONTENT FILTERS SETUP REQUIRED
             ================================================================
@@ -47,18 +61,18 @@ module ContentFilters
             
               rails generate content_filters:install
             
-            This will install required Chewy index files and configure
+            This will copy required Chewy index files and configure
             the content filtering system.
             
             ================================================================
             
           ERROR
           
-          Rails.logger.error(error_message) if Rails.logger
+          Rails.logger&.error(error_message)
           puts error_message
           
           # Prevent the application from starting
-          raise "Content filters setup required. Run: rails generate content_filters:install"
+          exit(1)
         end
       end
     end

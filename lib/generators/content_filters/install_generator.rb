@@ -7,11 +7,11 @@ module ContentFilters
       def install_content_filters
         say "Installing content filters...", :green
         
+        # Create marker file FIRST to prevent race conditions
+        create_marker_file
+        
         # Run the install rake task
         rake "content_filters:install"
-        
-        # Create a marker file to indicate generator has been run
-        create_marker_file
         
         say "Content filters installed successfully!", :green
         say "Your Rails application can now start normally.", :yellow
