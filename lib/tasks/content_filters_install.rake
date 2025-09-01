@@ -17,16 +17,21 @@ namespace :content_filters do
     
     # Copy files
     if Dir.exist?(source_path)
-      puts "Copying Chewy index files from content_filters gem..."
+      puts "Copying and transforming Chewy index files from content_filters gem..."
       
       # Find all files in the source directory
       Dir.glob(File.join(source_path, "*.rb")).each do |file|
         # Get just the filename
         filename = File.basename(file)
+        destination_file = File.join(destination_path, filename)
         
-        # Copy to the destination directory
-        FileUtils.cp(file, File.join(destination_path, filename))
-        puts "  - Copied #{filename}"
+        # Read the source file and remove the ContentFilters namespace
+        content = File.read(file)
+        transformed_content = content.gsub(/class\s+ContentFilters::(\w+Index)\s+</, 'class \1 <')
+        
+        # Write the transformed content to the destination
+        File.write(destination_file, transformed_content)
+        puts "  - Copied and transformed #{filename}"
       end
       
       puts "Chewy index files have been successfully copied to #{destination_path}/"

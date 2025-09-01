@@ -2,10 +2,6 @@ module ContentFilters
     class Engine < ::Rails::Engine
       isolate_namespace ContentFilters
 
-      # Exclude app/chewy from autoloading to prevent conflicts
-      config.autoload_paths.reject! { |path| path.to_s.include?('app/chewy') }
-      config.eager_load_paths.reject! { |path| path.to_s.include?('app/chewy') }
-
       initializer :append_migrations do |app|
         unless app.root.to_s.match root.to_s
           config.paths["db/migrate"].expanded.each do |expanded_path|
@@ -30,13 +26,16 @@ module ContentFilters
       # Prevent gem's app/chewy files from being autoloaded
       initializer 'content_filters.exclude_chewy_autoload', before: :set_autoload_paths do |app|
         # Remove any chewy paths that might have been added
-        gem_chewy_path = File.expand_path("../app/chewy", __FILE__)
-        
-        config.autoload_paths.delete(gem_chewy_path)
-        config.eager_load_paths.delete(gem_chewy_path)
+        gem_root = Gem.loaded_specs["content_filters"].full_gem_path
+        content_filters_chewy_path = File.join(gem_root, "app", "chewy", "content_filters")
+
+        # Also explicitly remove the content_filters subdirectory
+        config.autoload_paths.delete(content_filters_chewy_path)
+        config.eager_load_paths.delete(content_filters_chewy_path)
         
         # Also exclude from Rails default paths
         config.paths.add "app/chewy", with: []
+        config.paths.add "app/chewy/content_filters", with: []
       end
 
       # Enforce rake task execution before app startup

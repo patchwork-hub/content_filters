@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class StatusesIndex < Chewy::Index
+class ContentFilters::StatusesIndex < Chewy::Index
   include DatetimeClampingConcern
 
   settings index: index_preset(refresh_interval: '30s', number_of_shards: 5), analysis: {
