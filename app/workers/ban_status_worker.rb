@@ -5,8 +5,9 @@ class BanStatusWorker
 
   def perform(status_id)
     status = Status.find_by(id: status_id)
+    return unless status
 
-    is_status_banned = ContentFilters::BanStatusService.new.check_and_ban_status(status_id)
+    is_status_banned = ContentFilters::BanStatusService.new.check_and_ban_status(status)
 
     if is_status_banned
 

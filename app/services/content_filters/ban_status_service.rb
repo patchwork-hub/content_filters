@@ -5,10 +5,11 @@ module ContentFilters
     include Redisable
     include DatabaseHelper
 
-    def check_and_ban_status(status_id)
+    def check_and_ban_status(status)
       setting_filter_types = ['Content filters', 'Spam filters']
 
-      @status = Status.find(status_id)
+      @status = status
+
       with_read_replica do
         setting_filter_types.each do |setting_filter_type|
 
