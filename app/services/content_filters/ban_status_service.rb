@@ -57,7 +57,7 @@ module ContentFilters
 
       # Combine banned status_ids both content & spam filters
       # And also remove if the records exceeded 400 limit
-      return combine_banned_status_ids(status_id)
+      return combine_banned_status_ids(@status.id)
     end
 
     def keyword_matches_in_status?(status_id, community_id, filter_type)
