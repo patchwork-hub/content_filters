@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   spec.homepage    = "https://www.joinpatchwork.org/"
   spec.summary     = "Easily manage your timelines by blocking or unblocking specific Threads and Bluesky posts, and filter your timelines by blocking posts with specific hashtags and keywords."
   spec.description = "Easily manage your timelines by blocking or unblocking specific Threads and Bluesky posts, and filter your timelines by blocking posts with specific hashtags and keywords."
-  spec.license     = "MIT"
+  spec.license     = "AGPL-3.0"
 
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the "allowed_push_host"
   # to allow pushing to a single host or delete this section to allow pushing to any host.
@@ -19,7 +19,7 @@ Gem::Specification.new do |spec|
   # spec.metadata["changelog_uri"] = "TODO: Put your gem's CHANGELOG.md URL here."
 
   spec.files = Dir.chdir(File.expand_path(__dir__)) do
-    Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
+    Dir["{app,config,db,lib}/**/*", "AGPL-LICENSE", "Rakefile", "README.md"]
   end
 
   spec.add_dependency "rails", "~> 8.0"
