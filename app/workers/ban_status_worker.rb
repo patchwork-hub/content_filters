@@ -22,15 +22,15 @@ class BanStatusWorker
           spoiler_text: 'Sensitive content!!!'
         )
       end
-
-      # # Call `update_index` after the status is updated
-      # status.update_index('statuses', :proper)
-      # status.update_index('public_statuses', :proper)
     else
-      # Channel admin reblog related sub-channles service
-      if ENV.fetch('MAIN_CHANNEL', nil) != 'false' && ENV.fetch('MAIN_CHANNEL', nil) != nil && !is_status_banned
-        ReblogChannelsService.new.call(status) 
-      end
+      ContentFilters::ReblogChannelsService.new.call(status) if reblog_enabled?(is_status_banned)
     end
+  end
+
+  private
+  def reblog_enabled?(is_status_banned)
+    ((ENV.fetch('MAIN_CHANNEL', nil) != 'false' && ENV.fetch('MAIN_CHANNEL', nil) != nil) ||
+    (ENV.fetch('BOOST_BOT_ENABLED', nil) != 'false' && ENV.fetch('BOOST_BOT_ENABLED', nil) != nil)) &&
+    !is_status_banned
   end
 end
