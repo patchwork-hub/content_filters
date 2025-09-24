@@ -4,7 +4,7 @@ module ContentFilters
     def call(status)
       @status = status
       unless @status.sensitive? || @status.unlisted_visibility?
-        community_admin_account_ids = CommunityAdmin.where(is_boost_bot: true, account_status: CommunityAdmin::account_statuses[:active]).pluck(:account_id)
+        community_admin_account_ids = ContentFilters::CommunityAdmin.where(is_boost_bot: true, account_status: ContentFilters::CommunityAdmin::account_statuses[:active]).pluck(:account_id)
 
         # Custom Channel
         process_custom_channels(community_admin_account_ids)
@@ -50,7 +50,7 @@ module ContentFilters
 
         next unless valid_post_type?(community) && status_has_keyword?(@status.id, community.id, 'filter_in') && !status_has_keyword?(@status.id, community.id, 'filter_out')
 
-        ReblogChannelsWorker.perform_async(@status.id, admin_account.id)
+        ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
       end
     end
 
@@ -107,8 +107,8 @@ module ContentFilters
     end
 
     def get_community(account_id)
-      community_id = CommunityAdmin.find_by(account_id: account_id, account_status: CommunityAdmin.account_statuses["active"])&.patchwork_community_id
-      Community.find_by(id: community_id, deleted_at: nil)
+      community_id = ContentFilters::CommunityAdmin.find_by(account_id: account_id, account_status: ContentFilters::CommunityAdmin.account_statuses["active"])&.patchwork_community_id
+      ContentFilters::Community.find_by(id: community_id, deleted_at: nil)
     end
 
     def status_has_keyword?(status_id, community_id, filter_type)

@@ -11,7 +11,7 @@ class ReblogChannelsWorker
     community_user = User.find_by(account_id: admin_account.id)
     return false unless community_user
 
-    community_admin = CommunityAdmin.includes(:community).find_by(account_id: admin_account.id, is_boost_bot: true)
+    community_admin = ContentFilters::CommunityAdmin.includes(:community).find_by(account_id: admin_account.id, is_boost_bot: true)
     return false unless community_admin
 
     admin_access_token = ContentFilters::FetchAdminAccessTokenService.new(community_user.id).call
@@ -42,7 +42,7 @@ class ReblogChannelsWorker
     return false if @status.nil? || @status.reply? || community_admin.nil?
 
     post_url = fetch_post_url
-    bot_lamda_service = Patchwork::BoostLamdaNewsmastService.new
+    bot_lamda_service = ContentFilters::BoostLamdaNewsmastService.new
     boost_status = bot_lamda_service.boost_status(community_admin&.username, @status.id, post_url.to_s)
     return true if boost_status['statusCode'] == 200
 
