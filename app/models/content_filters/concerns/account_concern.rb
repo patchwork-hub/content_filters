@@ -4,6 +4,7 @@ module ContentFilters::Concerns::AccountConcern
   included do
 
     scope :without_banned, -> { where(accounts: { is_banned: false }) }
+    scope :channel_admins, ->(value) { where(id: value) }
 
     def excluded_domain_by_server_setting_federation
       user = User.find_by(account_id: id)
