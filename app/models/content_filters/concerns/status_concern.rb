@@ -16,6 +16,10 @@ module ContentFilters::Concerns::StatusConcern
     def filter_banned_keywords
       BanStatusWorker.perform_async(id)
     end
+
+    def mentioned_account?(account_id)
+      mentions.any? { |mention| mention.account_id == account_id }
+    end
   end
 
   def search_word_in_status(keyword)

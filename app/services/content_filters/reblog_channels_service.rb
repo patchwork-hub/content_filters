@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 module ContentFilters
   class ReblogChannelsService < BaseService
+    NON_REBOLOG_DOMAINS = %w[qlub.social qlub.channel.org thebristolcable.social].freeze
+
     def call(status)
       @status = status
       unless @status.sensitive? || @status.unlisted_visibility?
@@ -50,7 +52,7 @@ module ContentFilters
 
         next unless valid_post_type?(community) && status_has_keyword?(@status.id, community.id, 'filter_in') && !status_has_keyword?(@status.id, community.id, 'filter_out')
 
-        ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
+        ReblogChannelsWorker.perform_async(@status.id, admin_account_id) unless NON_REBOLOG_DOMAINS.include?(ENV['LOCAL_DOMAIN'])
       end
     end
 
@@ -68,8 +70,9 @@ module ContentFilters
       end
 
       group_channel_admins.each do |admin_account|
-        if @status.mentioned_account?(admin_account) && @status.account.follow_account?(admin_account_id)
-          ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
+        admin_account_id = admin_account&.id
+        if @status.mentioned_account?(admin_account_id) && @status.account.follow_account?(admin_account_id)
+          ReblogChannelsWorker.perform_async(@status.id, admin_account_id) unless NON_REBOLOG_DOMAINS.include?(ENV['LOCAL_DOMAIN'])
         end
       end
     end
