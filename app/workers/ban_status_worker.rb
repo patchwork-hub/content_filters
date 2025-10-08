@@ -4,6 +4,9 @@ class BanStatusWorker
   include Sidekiq::Worker
 
   def perform(status_id)
+    # Temporary skip for thebristolcable.social
+    return if (ENV.fetch('LOCAL_DOMAIN', nil)) == 'thebristolcable.social'
+
     status = Status.find_by(id: status_id)
     return unless status
 
