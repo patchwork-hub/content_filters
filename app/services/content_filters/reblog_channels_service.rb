@@ -26,6 +26,8 @@ module ContentFilters
 
       unique_admin_account_ids = (status_follower_admin_account_ids + tag_follower_admin_account_ids).uniq
 
+      admin_accounts = []
+
       Account.where(id: unique_admin_account_ids).find_each do |admin_account|
         admin_account_id = admin_account&.id
         next unless admin_account_id
@@ -52,14 +54,21 @@ module ContentFilters
 
         next unless valid_post_type?(community) && status_has_keyword?(@status.id, community.id, 'filter_in') && !status_has_keyword?(@status.id, community.id, 'filter_out')
 
+        admin_accounts << admin_account_id
+
         ReblogChannelsWorker.perform_async(@status.id, admin_account_id) unless NON_REBOLOG_DOMAINS.include?(ENV['LOCAL_DOMAIN'])
       end
+      
+      options = {admin_accounts: admin_accounts}
+      DistributionWorker.perform_async(@status.id, options)
     end
 
     def process_group_channels(community_admin_account_ids)
       return if @status.reply? || @status.reblog?
 
       community_admins = Account.where(id: community_admin_account_ids)
+
+      admin_accounts = []
 
       group_channel_admins = community_admins.select do |admin_account|
         admin_account_id = admin_account&.id
@@ -72,9 +81,12 @@ module ContentFilters
       group_channel_admins.each do |admin_account|
         admin_account_id = admin_account&.id
         if @status.mentioned_account?(admin_account_id) && @status.account.follow_account?(admin_account_id)
+          admin_accounts << admin_account_id
           ReblogChannelsWorker.perform_async(@status.id, admin_account_id) unless NON_REBOLOG_DOMAINS.include?(ENV['LOCAL_DOMAIN'])
         end
       end
+      options = {admin_accounts: admin_accounts}
+      DistributionWorker.perform_async(@status.id, options)
     end
 
     def valid_post_type?(community)
