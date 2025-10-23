@@ -8,7 +8,10 @@ module ContentFilters::Overrides::HomeExtendedTimeline
         params[:max_id],
         params[:since_id],
         params[:min_id],
-        truthy_param?(:exclude_direct_statuses)
+        current_account,
+        truthy_param?(:exclude_direct_statuses),
+        truthy_param?(:exclude_followed_tags),
+        truthy_param?(:exclude_replies)
       )
     end
 end

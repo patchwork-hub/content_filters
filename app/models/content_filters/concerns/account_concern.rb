@@ -3,6 +3,9 @@ module ContentFilters::Concerns::AccountConcern
 
   included do
 
+    # Tag follows (via TagFollow model) — followed tags convenience association
+    has_many :followed_tags, through: :tag_follows, source: :tag
+
     scope :without_banned, -> { where(accounts: { is_banned: false }) }
     scope :channel_admins, ->(value) { where(id: value) }
 

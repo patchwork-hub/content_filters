@@ -2,16 +2,20 @@ module ContentFilters::Concerns::FeedConcern
     extend ActiveSupport::Concern  
     include Redisable
 
-    def get(limit, max_id = nil, since_id = nil, min_id = nil, exclude_direct_statuses = nil)
+    def get(limit, max_id = nil, since_id = nil, min_id = nil, account = nil, exclude_direct_statuses = false, exclude_followed_tags = false, exclude_replies = false)
+      if account.present? && exclude_followed_tags
+        @account = account
+      end
+
       limit    = limit.to_i
       max_id   = max_id.to_i if max_id.present?
       since_id = since_id.to_i if since_id.present?
       min_id   = min_id.to_i if min_id.present?
 
-      from_redis(limit, max_id, since_id, min_id, exclude_direct_statuses)
+      from_redis(limit, max_id, since_id, min_id, exclude_direct_statuses, exclude_followed_tags, exclude_replies)
     end
 
-    def from_redis(limit, max_id, since_id, min_id, exclude_direct_statuses = nil)
+    def from_redis(limit, max_id, since_id, min_id, exclude_direct_statuses = nil, exclude_followed_tags = nil, exclude_replies = nil)
       max_id = '+inf' if max_id.blank?
       if min_id.blank?
         since_id   = '-inf' if since_id.blank?
@@ -24,6 +28,15 @@ module ContentFilters::Concerns::FeedConcern
 
       if exclude_direct_statuses
         @statuses = @statuses.where(visibility: %i(public unlisted))
+      end
+
+      if exclude_followed_tags
+        followed_tag_ids = @account.followed_tags.pluck(:id)
+        @statuses = @statuses.tagged_without(followed_tag_ids)
+      end
+
+      if exclude_replies
+        @statuses = @statuses.where(reply: false)
       end
 
       @statuses

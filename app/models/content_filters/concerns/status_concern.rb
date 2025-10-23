@@ -11,6 +11,12 @@ module ContentFilters::Concerns::StatusConcern
     # Override the scope of Status::SearchConcern
     scope :indexable, -> { without_reblogs.without_banned.public_visibility.joins(:account).where(account: { indexable: true }) }
 
+    scope :tagged_without, ->(tag_ids) {
+      return all if tag_ids.blank?
+  
+      where.not(id: Status.joins(:statuses_tags).where(statuses_tags: { tag_id: tag_ids }).select(:id))
+    }
+
     after_create_commit :filter_banned_keywords
 
     def filter_banned_keywords
