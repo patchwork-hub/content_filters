@@ -2,7 +2,16 @@ module ContentFilters::Concerns::FeedConcern
     extend ActiveSupport::Concern  
     include Redisable
 
-    def from_redis(limit, max_id, since_id, min_id)
+    def get(limit, max_id = nil, since_id = nil, min_id = nil, exclude_direct_statuses = nil)
+      limit    = limit.to_i
+      max_id   = max_id.to_i if max_id.present?
+      since_id = since_id.to_i if since_id.present?
+      min_id   = min_id.to_i if min_id.present?
+
+      from_redis(limit, max_id, since_id, min_id, exclude_direct_statuses)
+    end
+
+    def from_redis(limit, max_id, since_id, min_id, exclude_direct_statuses = nil)
       max_id = '+inf' if max_id.blank?
       if min_id.blank?
         since_id   = '-inf' if since_id.blank?
@@ -12,14 +21,19 @@ module ContentFilters::Concerns::FeedConcern
       end
   
       filter_and_cache_statuses(unhydrated)
+
+      if exclude_direct_statuses
+        @statuses = @statuses.where(visibility: %i(public unlisted))
+      end
+
+      @statuses
     end
 
     def filter_and_cache_statuses(unhydrated)
       filter_service = ContentFilters::FeedService.new()
       banned_ids = filter_service.excluded_status_ids
-      statuses = Status.where(id: unhydrated)
-      statuses = statuses.where.not(id: banned_ids) if banned_ids.any?
-      statuses
+      @statuses = Status.where(id: unhydrated)
+      @statuses = @statuses.where.not(id: banned_ids) if banned_ids.any?
+      @statuses
     end
-      
 end

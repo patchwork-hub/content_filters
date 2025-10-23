@@ -4,24 +4,21 @@ class BanStatusWorker
   include Sidekiq::Worker
 
   def perform(status_id)
-    status = Status.find_by(id: status_id)
+    status = Status.includes(:account, :tags).find_by(id: status_id)
     return unless status
 
     is_status_banned = ContentFilters::BanStatusService.new.check_and_ban_status(status)
 
     if is_status_banned
 
-      status.update!(
+      attrs = {
         is_banned: is_status_banned,
         updated_at: Time.current
-      )
-
+      }
       if status.local?
-        status.update!(
-          sensitive: true,
-          spoiler_text: 'Sensitive content!!!'
-        )
+        attrs.merge!(sensitive: true, spoiler_text: 'Sensitive content!!!')
       end
+      status.update!(attrs)
     else
       ContentFilters::ReblogChannelsService.new.call(status) if reblog_enabled?(is_status_banned)
     end
