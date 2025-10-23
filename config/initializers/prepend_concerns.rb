@@ -7,5 +7,5 @@ Rails.application.config.to_prepare do
     Tag.prepend(ContentFilters::Concerns::TagConcern)
     User.include(ContentFilters::Concerns::UserConcern)
     TagSearchService.prepend(ContentFilters::Concerns::TagSearchService)
-    # StatusFilter.prepend(ContentFilters::Concerns::StatusFilterConcern)
+    Api::V1::Timelines::HomeController.prepend(ContentFilters::Overrides::HomeExtendedTimeline)
 end
