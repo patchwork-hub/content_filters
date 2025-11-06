@@ -56,11 +56,17 @@ module ContentFilters
 
         admin_accounts << admin_account_id
 
-        ReblogChannelsWorker.perform_async(@status.id, admin_account_id) unless NON_REBOLOG_DOMAINS.include?(ENV['LOCAL_DOMAIN'])
+        unless no_boost_channel?
+          ReblogChannelsWorker.perform_async(@status.id, admin_account_id) unless NON_REBOLOG_DOMAINS.include?(ENV['LOCAL_DOMAIN'])
+        end
       end
-      
+
       options = {admin_accounts: admin_accounts}
       DistributionWorker.perform_async(@status.id, options)
+    end
+
+    def no_boost_channel?
+      ServerSetting.find_by(name: "No-Boost")&.value == true
     end
 
     def process_group_channels(community_admin_account_ids)
