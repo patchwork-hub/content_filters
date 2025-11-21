@@ -62,6 +62,10 @@ module ContentFilters
         end
       end
 
+      # check channel's self-post
+      community = get_community(@status.account_id)
+      admin_accounts << @status.account_id if community
+
       options = {admin_accounts: admin_accounts}
       DistributionWorker.perform_async(@status.id, options)
     end
