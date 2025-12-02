@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 module ContentFilters
   class ReblogChannelsService < BaseService
-    NON_REBOLOG_DOMAINS = %w[qlub.social qlub.channel.org thebristolcable.social mastodon.patchwork.io].freeze
 
     def call(status)
       @status = status
@@ -58,7 +57,7 @@ module ContentFilters
 
         # skip if no_boost_channel is true
         unless community&.no_boost_channel
-          ReblogChannelsWorker.perform_async(@status.id, admin_account_id) unless NON_REBOLOG_DOMAINS.include?(ENV['LOCAL_DOMAIN'])
+          ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
         end
       end
 
@@ -89,7 +88,7 @@ module ContentFilters
         admin_account_id = admin_account&.id
         if @status.mentioned_account?(admin_account_id) && @status.account.follow_account?(admin_account_id)
           admin_accounts << admin_account_id
-          ReblogChannelsWorker.perform_async(@status.id, admin_account_id) unless NON_REBOLOG_DOMAINS.include?(ENV['LOCAL_DOMAIN'])
+          ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
         end
       end
       options = {"admin_accounts" => admin_accounts}
