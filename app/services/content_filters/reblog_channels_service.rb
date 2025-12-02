@@ -66,7 +66,7 @@ module ContentFilters
       community = get_community(@status.account_id)
       admin_accounts << @status.account_id if community
 
-      options = {admin_accounts: admin_accounts}
+      options = {"admin_accounts" => admin_accounts}
       DistributionWorker.perform_async(@status.id, options)
     end
 
@@ -92,7 +92,7 @@ module ContentFilters
           ReblogChannelsWorker.perform_async(@status.id, admin_account_id) unless NON_REBOLOG_DOMAINS.include?(ENV['LOCAL_DOMAIN'])
         end
       end
-      options = {admin_accounts: admin_accounts}
+      options = {"admin_accounts" => admin_accounts}
       DistributionWorker.perform_async(@status.id, options)
     end
 
