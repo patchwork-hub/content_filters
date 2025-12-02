@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 module ContentFilters
   class ReblogChannelsService < BaseService
-    NON_REBOLOG_DOMAINS = %w[qlub.social qlub.channel.org thebristolcable.social].freeze
+    NON_REBOLOG_DOMAINS = %w[qlub.social qlub.channel.org thebristolcable.social mastodon.patchwork.io].freeze
 
     def call(status)
       @status = status
