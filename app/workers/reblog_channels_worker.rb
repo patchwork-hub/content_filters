@@ -26,6 +26,7 @@ class ReblogChannelsWorker
     else
       begin
         ContentFilters::ReblogRequestService.new.call(admin_access_token, status_id)
+        ContentFilters::CustomBoostBotService.new.call(status_id) if community_admin&.username == 'bristol'
       rescue => e
         Rails.logger.error "ReblogRequestService failed: - #{e.message}"
         false
