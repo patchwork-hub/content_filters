@@ -27,7 +27,8 @@ class ReblogChannelsWorker
       begin
         ContentFilters::ReblogRequestService.new.call(admin_access_token, status_id)
         ## Need to check channel?, channel_type
-        ContentFilters::CustomBoostBotService.new.call(status_id) if community_admin&.username == 'bristol'
+        channels = ENV.fetch('FOR_YOU_TIMELINE_CHANNELS').presence&.split(/\s*,\s*/)&.reject(&:blank?)&.map(&:downcase) || []
+        ContentFilters::CustomBoostBotService.new(status_id, community_admin&.username).call if channels.include?(community_admin&.username.downcase)
       rescue => e
         Rails.logger.error "ReblogRequestService failed: - #{e.message}"
         false

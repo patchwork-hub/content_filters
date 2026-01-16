@@ -2,22 +2,23 @@ module ContentFilters
   class CustomBoostBotService < BaseService
     require 'httparty'
 
-    def initialize
-      @base_url = ENV.fetch('BRISTOL_CABLE_INSTANCE_URL', nil)
-      @client_id = ENV.fetch('BRISTOL_CABLE_CLIENT_ID', nil)
-      @client_secret = ENV.fetch('BRISTOL_CABLE_CLIENT_SECRET', nil)
+    def initialize(status_id, username)
+      byebug
+      @base_url = ENV.fetch("#{username.upcase}_INSTANCE_URL", nil)
+      @client_id = ENV.fetch("#{username.upcase}_CLIENT_ID", nil)
+      @client_secret = ENV.fetch("#{username.upcase}_CLIENT_SECRET", nil)
+      @status = Status.find_by(id: status_id)
     end
 
-    def call(status_id)
-      status = Status.find_by(id: status_id)
-      return false unless status
+    def call
+      return false unless @status
       url = @base_url + "/api/v1/custom_statuses/add_custom_boost_bot_status"
 
       response = HTTParty.post(url,
                     body: {
                         client_id: @client_id,
                         client_secret: @client_secret,
-                        status_url: status.url
+                        status_url: @status.url
                     }.to_json,
                     headers: { 'Content-Type' => 'application/json'})             
     end
