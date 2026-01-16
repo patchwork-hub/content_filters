@@ -17,12 +17,13 @@ module ContentFilters
       Rails.logger.info "------ api url #{url} -------"
       Rails.logger.info "------ client_id #{@client_id} --------"
       Rails.logger.info "------ client_secret #{@client_secret} -------"
+      Rails.logger.info "------ status_url #{status.url} -------"
 
       response = HTTParty.post(url,
                     body: {
                         client_id: @client_id,
                         client_secret: @client_secret,
-                        status_url: status.uri 
+                        status_url: status.url 
                     }.to_json,
                     headers: { 'Content-Type' => 'application/json'})
 
