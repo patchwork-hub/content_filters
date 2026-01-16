@@ -13,6 +13,8 @@ module ContentFilters
       return false unless @status
       url = @base_url + "/api/v1/custom_statuses/add_custom_boost_bot_status"
 
+      status_url = build_status_url
+
       Rails.logger.info "===== START Call add_custom_boost_bot_status ======"
       Rails.logger.info "===== url #{url} ======"
       Rails.logger.info "===== client_id #{@client_id} ======"
@@ -23,11 +25,23 @@ module ContentFilters
                     body: {
                         client_id: @client_id,
                         client_secret: @client_secret,
-                        status_url: @status.url
+                        status_url: status_url
                     }.to_json,
                     headers: { 'Content-Type' => 'application/json'})      
                     
                     Rails.logger.info "======== RESPONSE add_custom_boost_bot_status #{response} ========"
+    end
+
+    private
+
+    def build_status_url
+      account = @status.account
+      acct = local? ? "@#{account.username}" : "@#{account.username}@#{account.domain}"
+      status_url = "https://#{ENV['LOCAL_DOMAIN']}/#{acct}/#{@status.id}"
+    end
+
+    def local?
+      @status.account.domain.nil?
     end
   end
 end
