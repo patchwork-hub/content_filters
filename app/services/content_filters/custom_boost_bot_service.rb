@@ -13,6 +13,11 @@ module ContentFilters
       return false unless status
       url = @base_url + "/api/v1/custom_statuses/add_custom_boost_bot_status"
 
+      Rails.logger.info "------ START Call add_custom_boost_bot_status api ---------"
+      Rails.logger.info "------ api url #{ur} -------"
+      Rails.logger.info "------ client_id #{@client_id} --------"
+      Rails.logger.info "------ client_secret #{@client_secret} -------"
+
       response = HTTParty.post(url,
                     body: {
                         client_id: @client_id,
@@ -20,6 +25,8 @@ module ContentFilters
                         status_url: status.uri 
                     }.to_json,
                     headers: { 'Content-Type' => 'application/json'})
+
+                    Rails.logger.info "-------- RESPONSE add_custom_boost_bot_status #{response}-----------"             
     end
   end
 end
