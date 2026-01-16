@@ -14,7 +14,7 @@ module ContentFilters
       url = @base_url + "/api/v1/custom_statuses/add_custom_boost_bot_status"
 
       Rails.logger.info "------ START Call add_custom_boost_bot_status api ---------"
-      Rails.logger.info "------ api url #{ur} -------"
+      Rails.logger.info "------ api url #{url} -------"
       Rails.logger.info "------ client_id #{@client_id} --------"
       Rails.logger.info "------ client_secret #{@client_secret} -------"
 
