@@ -3,7 +3,6 @@ module ContentFilters
     require 'httparty'
 
     def initialize(status_id, username)
-      byebug
       @base_url = ENV.fetch("#{username.upcase}_INSTANCE_URL", nil)
       @client_id = ENV.fetch("#{username.upcase}_CLIENT_ID", nil)
       @client_secret = ENV.fetch("#{username.upcase}_CLIENT_SECRET", nil)
@@ -14,13 +13,21 @@ module ContentFilters
       return false unless @status
       url = @base_url + "/api/v1/custom_statuses/add_custom_boost_bot_status"
 
+      Rails.logger.info "===== START Call add_custom_boost_bot_status ======"
+      Rails.logger.info "===== url #{url} ======"
+      Rails.logger.info "===== client_id #{@client_id} ======"
+      Rails.logger.info "===== client_secret #{@client_secret} ======="
+      Rails.logger.info "===== status_url #{@status.url} ======="
+
       response = HTTParty.post(url,
                     body: {
                         client_id: @client_id,
                         client_secret: @client_secret,
                         status_url: @status.url
                     }.to_json,
-                    headers: { 'Content-Type' => 'application/json'})             
+                    headers: { 'Content-Type' => 'application/json'})      
+                    
+                    Rails.logger.info "======== RESPONSE add_custom_boost_bot_status #{response} ========"
     end
   end
 end
