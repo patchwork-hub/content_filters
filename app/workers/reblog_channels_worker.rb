@@ -20,8 +20,6 @@ class ReblogChannelsWorker
     community = community_admin&.community
     return false unless community
 
-    Rails.logger.info "========= Communit Admin Username #{community_admin&.username} ============="
-
     if community&.channel_type == 'newsmast'
       # Reblog the status by bot if the channel_type is newsmast
       boost_by_newsmast_bot(community_admin, status_id)
@@ -29,7 +27,6 @@ class ReblogChannelsWorker
       begin
         ContentFilters::ReblogRequestService.new.call(admin_access_token, status_id)
         ## Need to check channel?, channel_type
-        Rails.logger.info "====== Call Add For You Timeline API ========"
         ContentFilters::CustomBoostBotService.new.call(status_id) if community_admin&.username == 'bristol'
       rescue => e
         Rails.logger.error "ReblogRequestService failed: - #{e.message}"
