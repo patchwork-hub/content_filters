@@ -12,16 +12,20 @@ module ContentFilters
 
       with_read_replica do
         setting_filter_types.each do |setting_filter_type|
+          Rails.logger.info "<<<<<<<< IN BAN STATUS SERVICE >>>>>>>>>>"
 
           # The keys wil generated as below
           # 1.) content_filters_banned_status_ids
           # 2.) span_filters_banned_status_ids
           redis_key = "#{setting_filter_type.downcase.gsub(/\s+/, '_')}_banned_status_ids"
           server_setting = ContentFilters::ServerSetting.find_by(name: setting_filter_type)
+          Rails.logger.info "<<<<<<<< IN BAN STATUS SERVICE server_setting #{server_setting} >>>>>>>>>>"
           next unless server_setting&.value
 
           filters = fetch_filters_from_all_keys(server_setting.name)
+          Rails.logger.info "<<<<<<<< IN BAN STATUS SERVICE filters #{filters} >>>>>>>>>>"
           active_filters = filters.map { |f| JSON.parse(f) }.select { |f| f['is_active'] }
+          Rails.logger.info "<<<<<<<< IN BAN STATUS SERVICE active_filters #{active_filters} >>>>>>>>>>"
           active_filters.each do |f|
             keyword = f['keyword']
             filter_type = f['filter_type'].downcase
@@ -32,8 +36,11 @@ module ContentFilters
             check_and_ban_account(keyword)
 
             if filter_type == 'hashtag' || filter_type == 'both'
+              Rails.logger.info "<<<<<<<< IN BAN STATUS SERVICE hashtag or both >>>>>>>>>>"
               tag_ids = @status.tags.where(name: keyword.downcase.gsub('#', '')).ids
+              Rails.logger.info "<<<<<<<< IN BAN STATUS SERVICE tag_ids #{tag_ids} >>>>>>>>>>"
               if tag_ids.present?
+                Rails.logger.info "<<<<<<<< IN BAN STATUS SERVICE tag_ids present >>>>>>>>>>"
                 # If the tag is banned, update its is_banned attribute to true
                 # to trigger update_tags callback for elastic search
                 with_primary do
@@ -46,8 +53,10 @@ module ContentFilters
             end
 
             if filter_type == 'both' || filter_type == 'content'
+              Rails.logger.info "<<<<<<<< IN BAN STATUS SERVICE both or content >>>>>>>>>>"
               include_keyword = @status.search_word_in_status(keyword)
               if include_keyword
+                Rails.logger.info "<<<<<<<< IN BAN STATUS SERVICE include_keyword #{include_keyword} >>>>>>>>>>"
                 redis.zadd(redis_key, @status.id, @status.id)
               end
             end

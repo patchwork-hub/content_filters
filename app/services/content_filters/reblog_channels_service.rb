@@ -4,9 +4,10 @@ module ContentFilters
 
     def call(status)
       @status = status
+      Rails.logger.info "<<<<<<<< IN REBLOG CHANNELS SERVICE >>>>>>>>>>"
       unless @status.sensitive? || @status.unlisted_visibility?
         community_admin_account_ids = ContentFilters::CommunityAdmin.where(is_boost_bot: true, account_status: ContentFilters::CommunityAdmin::account_statuses[:active]).pluck(:account_id)
-
+        Rails.logger.info "<<<<<<<< IN REBLOG CHANNELS SERVICE community_admin_account_ids #{community_admin_account_ids} >>>>>>>>>>"
         # Custom Channel
         process_custom_channels(community_admin_account_ids)
 
@@ -18,6 +19,7 @@ module ContentFilters
     private
 
     def process_custom_channels(community_admin_account_ids)
+      Rails.logger.info "<<<<<<<< IN REBLOG CHANNELS SERVICE process_custom_channels >>>>>>>>>>"
       status_follower_admin_account_ids = @status.account.followers.local.channel_admins(community_admin_account_ids).pluck(:id)
 
       tag_ids = @status.tags.ids
@@ -29,34 +31,43 @@ module ContentFilters
 
       Account.where(id: unique_admin_account_ids).find_each do |admin_account|
         admin_account_id = admin_account&.id
+        Rails.logger.info "<<<<<<<< IN REBLOG CHANNELS SERVICE admin_account_id #{admin_account_id} >>>>>>>>>>"
         next unless admin_account_id
 
         community = get_community(admin_account_id)
+        Rails.logger.info "<<<<<<<< IN REBLOG CHANNELS SERVICE community #{community} >>>>>>>>>>"
         next unless community
 
         content_type = community.content_type
+        Rails.logger.info "<<<<<<<< IN REBLOG CHANNELS SERVICE content_type #{content_type} >>>>>>>>>>"
         next unless content_type&.custom_channel?
 
         # Skip if the admin_account has muted the status account
         next if Mute.exists?(account_id: admin_account_id, target_account_id: @status.account.id)
+        Rails.logger.info "<<<<<<<< IN REBLOG CHANNELS SERVICE Mute.exists? passed >>>>>>>>>>"
 
         # Skip if the admin_account does not follow the status owner and the owner is a bot
         next if !status_follower_admin_account_ids.include?(admin_account_id) && @status.account.bot?
+        Rails.logger.info "<<<<<<<< IN REBLOG CHANNELS SERVICE status_follower_admin_account_ids passed >>>>>>>>>>"
 
         # Skip if `and_condition?` is true and admin_account is not in both follower lists
         if content_type&.and_condition? && !(tag_follower_admin_account_ids.include?(admin_account_id) &&
                       status_follower_admin_account_ids.include?(admin_account_id))
           next
         end
+        Rails.logger.info "<<<<<<<< IN REBLOG CHANNELS SERVICE and_condition? passed >>>>>>>>>>"
 
         next if newsmast_global_filter?(@status.id, community.id, 'filter_out')
+        Rails.logger.info "<<<<<<<< IN REBLOG CHANNELS SERVICE newsmast_global_filter? passed >>>>>>>>>>"
 
         next unless valid_post_type?(community) && status_has_keyword?(@status.id, community.id, 'filter_in') && !status_has_keyword?(@status.id, community.id, 'filter_out')
+        Rails.logger.info "<<<<<<<< IN REBLOG CHANNELS SERVICE valid_post_type? status_has_keyword? passed >>>>>>>>>>"
 
         admin_accounts << admin_account_id
 
         # skip if no_boost_channel is true
         unless community&.no_boost_channel
+          Rails.logger.info "<<<<<<<< CALL REBLOG CHANNELS WORKER >>>>>>>>>>"
           ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
         end
       end
