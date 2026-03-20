@@ -15,12 +15,6 @@ module ContentFilters
 
       status_url = build_status_url
 
-      Rails.logger.info "===== START Call add_custom_boost_bot_status ======"
-      Rails.logger.info "===== url #{url} ======"
-      Rails.logger.info "===== client_id #{@client_id} ======"
-      Rails.logger.info "===== client_secret #{@client_secret} ======="
-      Rails.logger.info "===== status_url #{@status.url} ======="
-
       response = HTTParty.post(url,
                     body: {
                         client_id: @client_id,
@@ -28,8 +22,6 @@ module ContentFilters
                         status_url: status_url
                     }.to_json,
                     headers: { 'Content-Type' => 'application/json'})      
-                    
-                    Rails.logger.info "======== RESPONSE add_custom_boost_bot_status #{response} ========"
     end
 
     private
