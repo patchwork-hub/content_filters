@@ -11,7 +11,6 @@ class BanStatusWorker
 
 
     if is_status_banned
-
       attrs = {
         is_banned: is_status_banned,
         updated_at: Time.current
