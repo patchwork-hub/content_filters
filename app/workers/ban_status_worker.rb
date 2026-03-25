@@ -3,7 +3,7 @@
 class BanStatusWorker
   include Sidekiq::Worker
 
-  sidekiq_options queue: 'ban_statuses', retry: 0
+  sidekiq_options queue: 'default', retry: 0
 
   def perform(status_id)
     status = Status.includes(:account, :tags).find_by(id: status_id)
