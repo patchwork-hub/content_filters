@@ -5,7 +5,8 @@ class BanStatusWorker
 
   sidekiq_options queue: 'default', retry: 0
 
-  def perform(status_id, from: 'unknown')
+  def perform(status_id, metadata = {})
+    from = metadata.is_a?(Hash) ? (metadata['from'] || metadata[:from] || 'unknown') : 'unknown'
     Rails.logger.info "BanStatusWorker called for status_id: #{status_id} from: #{from}"
 
     status = Status.includes(:account, :tags).find_by(id: status_id)
