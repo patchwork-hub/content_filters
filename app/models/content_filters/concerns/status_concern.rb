@@ -23,7 +23,7 @@ module ContentFilters::Concerns::StatusConcern
       # [start] Originally, we were calling the BanStatusService directly here, but to avoid blocking the main thread, we will now enqueue a background job to handle the banning process.
       # BanStatusWorker.perform_async(id)
       # [end]
-      BanStatusWorker.perform_in(100.seconds, id)
+      BanStatusWorker.perform_in(60.seconds, id)
     end
 
     def mentioned_account?(account_id)
