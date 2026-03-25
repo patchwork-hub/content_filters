@@ -23,7 +23,7 @@ module ContentFilters::Concerns::StatusConcern
       # Local statuses are enqueued from Mastodon's PostStatusService after post-processing.
       return if local?
 
-      BanStatusWorker.perform_async(id, { 'from' => 'after_create_commit#filter_banned_keywords' })
+      BanStatusWorker.perform_async(id)
     end
 
     def mentioned_account?(account_id)
