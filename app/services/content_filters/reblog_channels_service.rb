@@ -5,6 +5,9 @@ module ContentFilters
     def call(status)
       @status = status
       unless @status.sensitive? || @status.unlisted_visibility?
+        # Channel reboost filtered by 7-day posts
+        return if @status.created_at < 7.days.ago.utc
+
         community_admin_account_ids = ContentFilters::CommunityAdmin.where(is_boost_bot: true, account_status: ContentFilters::CommunityAdmin::account_statuses[:active]).pluck(:account_id)
 
         # Custom Channel
