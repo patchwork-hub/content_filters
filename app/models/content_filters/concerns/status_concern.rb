@@ -20,10 +20,10 @@ module ContentFilters::Concerns::StatusConcern
     after_create_commit :filter_banned_keywords
 
     def filter_banned_keywords
-      # [start] Originally, we were calling the BanStatusService directly here, but to avoid blocking the main thread, we will now enqueue a background job to handle the banning process.
-      # BanStatusWorker.perform_async(id)
-      # [end]
-      BanStatusWorker.perform_in(100.seconds, id)
+      # Local statuses are enqueued from Mastodon's PostStatusService after post-processing.
+      return if local?
+
+      BanStatusWorker.perform_async(id)
     end
 
     def mentioned_account?(account_id)
