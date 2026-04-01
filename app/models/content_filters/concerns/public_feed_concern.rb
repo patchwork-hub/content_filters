@@ -113,7 +113,7 @@ module ContentFilters::Concerns::PublicFeedConcern
 
   def grouped_admin_statuses_scope
     grouped_admin_account_ids = fetch_grouped_admin_account_ids
-    Status.where.not(account_id: grouped_admin_account_ids) if grouped_admin_account_ids.any?
+    Status.where.not(account_id: grouped_admin_account_ids)
   end
 
   def fetch_grouped_admin_account_ids
