@@ -40,8 +40,16 @@ module ContentFilters::Concerns::FeedConcern
       end
 
       if grouped_admin_statuses
+        return @statuses unless Status.column_names.include?('local_only')
+
         grouped_admin_account_ids = fetch_grouped_admin_account_ids
-        @statuses = @statuses.where.not(account_id: grouped_admin_account_ids) if grouped_admin_account_ids.any?
+        if grouped_admin_account_ids.any?
+          @statuses = @statuses.where.not(account_id: grouped_admin_account_ids, local_only: true, local: true)
+
+          # To prevent showing reblogs of grouped admin accounts, we also need to exclude any statuses that are reblogs of the grouped admin accounts' statuses. We only need to check local_only: true and local: true statuses for reblogs, as the grouped admin accounts are only posting local statuses.
+          grouped_admin_reblogged_ids = Status.where(account_id: grouped_admin_account_ids, local_only: true, local: true).pluck(:reblog_of_id).compact
+          @statuses = @statuses.where.not(id: grouped_admin_reblogged_ids) if grouped_admin_reblogged_ids.any?
+        end
       end
 
       @statuses

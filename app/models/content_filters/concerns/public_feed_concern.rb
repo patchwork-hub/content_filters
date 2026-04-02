@@ -30,6 +30,7 @@ module ContentFilters::Concerns::PublicFeedConcern
     scope.merge!(account_filters_scope) if account?
     scope.merge!(media_only_scope) if media_only?
     scope.merge!(grouped_admin_statuses_scope) if grouped_admin_statuses?
+    scope.merge!(grouped_admin_reblogged_statuses_scope) if grouped_admin_statuses?
     scope.merge!(language_scope) if account&.chosen_languages.present?
     scope = apply_filters(scope)
     scope.to_a_paginated_by_id(limit, max_id: max_id, since_id: since_id, min_id: min_id)
@@ -108,12 +109,12 @@ module ContentFilters::Concerns::PublicFeedConcern
   end
 
   def grouped_admin_statuses?
-    options[:grouped_admin_statuses]
+    options[:grouped_admin_statuses] && Status.column_names.include?('local_only')
   end
 
   def grouped_admin_statuses_scope
     grouped_admin_account_ids = fetch_grouped_admin_account_ids
-    Status.where.not(account_id: grouped_admin_account_ids)
+    Status.where.not(account_id: grouped_admin_account_ids, local_only: true, local: true)
   end
 
   def fetch_grouped_admin_account_ids
@@ -128,5 +129,11 @@ module ContentFilters::Concerns::PublicFeedConcern
         .pluck(:account_id)
         .uniq
     end
+  end
+
+  def grouped_admin_reblogged_statuses_scope
+    grouped_admin_account_ids = fetch_grouped_admin_account_ids
+    grouped_admin_reblogged_ids = Status.where(account_id: grouped_admin_account_ids, local_only: true, local: true).pluck(:reblog_of_id).compact
+    Status.where.not(id: grouped_admin_reblogged_ids)
   end
 end
