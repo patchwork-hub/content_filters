@@ -11,7 +11,8 @@ module ContentFilters::Overrides::HomeExtendedTimeline
         current_account,
         truthy_param?(:exclude_direct_statuses),
         truthy_param?(:exclude_followed_tags),
-        truthy_param?(:exclude_replies)
+        truthy_param?(:exclude_replies),
+        truthy_param?(:grouped_admin_statuses)
       )
     end
 end

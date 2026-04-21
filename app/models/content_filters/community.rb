@@ -31,5 +31,6 @@ module ContentFilters
 
     enum :post_visibility, { public_visibility: 0, unlisted: 1, followers_only: 2, direct: 3 }
 
+    enum :channel_type, { channel: 'channel', channel_feed: 'channel_feed', hub: 'hub', newsmast: 'newsmast'}
   end
 end

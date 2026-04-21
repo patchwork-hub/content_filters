@@ -104,6 +104,7 @@ systemctl restart mastodon-sidekiq
 - **Direct Status Exclusion**: Option to exclude direct messages from timelines
 - **Followed Tags Filtering**: Control visibility of posts from followed hashtags
 - **Reply Filtering**: Option to exclude replies from feed
+- **Grouped Admins Statuses Filtering**: Option to exclude statuses from community channel boost-bot admin accounts in home and public timelines
 
 ### 🎯 Feed Service Integration
 
