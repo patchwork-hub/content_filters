@@ -21,12 +21,20 @@ module ContentFilters
     private
 
     def process_custom_channels(community_admin_account_ids)
+
+      # Find community admins who follow at least one account that reblogged this status.
+      reblog_follower_admin_accounts = Account.where(id: community_admin_account_ids).where(
+        id: Follow.where(
+          target_account_id: Status.where(reblog_of_id: @status.id).select(:account_id)
+        ).select(:account_id)
+      ).distinct
+
       status_follower_admin_account_ids = @status.account.followers.local.channel_admins(community_admin_account_ids).pluck(:id)
 
       tag_ids = @status.tags.ids
       tag_follower_admin_account_ids = TagFollow.where(tag_id: tag_ids).pluck(:account_id)
 
-      unique_admin_account_ids = (status_follower_admin_account_ids + tag_follower_admin_account_ids).uniq
+      unique_admin_account_ids = (status_follower_admin_account_ids + tag_follower_admin_account_ids + reblog_follower_admin_accounts.pluck(:id)).uniq
 
       admin_accounts = []
 
