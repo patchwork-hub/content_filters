@@ -95,10 +95,7 @@ module ContentFilters
     end
 
     def process_group_channels(community_admin_account_ids)
-      if @status.reply? || @status.reblog?
-        Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=group skipped=reply_or_reblog"
-        return
-      end
+      return if @status.reply? || @status.reblog?
 
       community_admins = Account.where(id: community_admin_account_ids)
 
@@ -106,31 +103,27 @@ module ContentFilters
 
       group_channel_admins = community_admins.select do |admin_account|
         admin_account_id = admin_account&.id
-        next log_admin_decision(admin_account, 'group', 'skipped=missing_admin_id') unless admin_account_id
+        next unless admin_account_id
 
         community = get_community(admin_account_id)
-        next log_admin_decision(admin_account, 'group', 'skipped=community_not_found') unless community
-        next log_admin_decision(admin_account, 'group', 'skipped=not_group_channel') unless community.content_type&.group_channel?
-
-        true
+        community&.content_type&.group_channel?
       end
 
       group_channel_admins.each do |admin_account|
         admin_account_id = admin_account&.id
-        next log_admin_decision(admin_account, 'group', 'skipped=admin_not_mentioned') unless @status.mentioned_account?(admin_account_id)
-        next log_admin_decision(admin_account, 'group', 'skipped=admin_not_followed') unless @status.account.follow_account?(admin_account_id)
-
-        admin_accounts << admin_account_id
-        ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
-        log_admin_decision(admin_account, 'group', 'reblog_queued=true')
+        if @status.mentioned_account?(admin_account_id) && @status.account.follow_account?(admin_account_id)
+          admin_accounts << admin_account_id
+          ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
+        end
       end
       options = {"admin_accounts" => admin_accounts}
       DistributionWorker.perform_async(@status.id, options)
-      Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=group matched=#{admin_accounts.size} reblogs_queued=#{admin_accounts.size} distribution_queued=true"
     end
 
     def log_admin_decision(admin_account, channel, decision)
-      Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=#{channel} admin_id=#{admin_account&.id} admin_username=#{admin_account&.username.to_s.dump} #{decision}"
+      if admin_account&.role == 'NewsmastAdmin'
+        Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=#{channel} admin_id=#{admin_account&.id} admin_username=#{admin_account&.username.to_s.dump} #{decision}"
+      end
       nil
     end
 
