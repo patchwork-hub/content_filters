@@ -121,7 +121,7 @@ module ContentFilters
     end
 
     def log_admin_decision(admin_account, channel, decision)
-      if admin_account&.role == 'NewsmastAdmin'
+      if admin_account&.user&.role == 'NewsmastAdmin'
         Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=#{channel} admin_id=#{admin_account&.id} admin_username=#{admin_account&.username.to_s.dump} #{decision}"
       end
       nil
