@@ -6,7 +6,10 @@ module ContentFilters
       @status = status
       unless @status.sensitive? || @status.unlisted_visibility?
         # Channel reboost filtered by 7-day posts
-        return if @status.created_at < 7.days.ago.utc
+        if @status.created_at < 7.days.ago.utc
+          Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} skipped=older_than_7_days"
+          return
+        end
 
         community_admin_account_ids = ContentFilters::CommunityAdmin.where(is_boost_bot: true, account_status: ContentFilters::CommunityAdmin::account_statuses[:active]).pluck(:account_id)
 
@@ -15,6 +18,8 @@ module ContentFilters
 
         # Group Channel
         process_group_channels(community_admin_account_ids)
+      else
+        Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} skipped=sensitive_or_unlisted"
       end
     end
 
@@ -37,38 +42,46 @@ module ContentFilters
       unique_admin_account_ids = (status_follower_admin_account_ids + tag_follower_admin_account_ids + reblog_follower_admin_accounts.pluck(:id)).uniq
 
       admin_accounts = []
+      queued_reblogs = 0
 
       Account.where(id: unique_admin_account_ids).find_each do |admin_account|
         admin_account_id = admin_account&.id
-        next unless admin_account_id
+        next log_admin_decision(admin_account, 'custom', 'skipped=missing_admin_id') unless admin_account_id
 
         community = get_community(admin_account_id)
-        next unless community
+        next log_admin_decision(admin_account, 'custom', 'skipped=community_not_found') unless community
 
         content_type = community.content_type
-        next unless content_type&.custom_channel?
+        next log_admin_decision(admin_account, 'custom', 'skipped=not_custom_channel') unless content_type&.custom_channel?
 
         # Skip if the admin_account has muted the status account
-        next if Mute.exists?(account_id: admin_account_id, target_account_id: @status.account.id)
+        next log_admin_decision(admin_account, 'custom', 'skipped=author_muted') if Mute.exists?(account_id: admin_account_id, target_account_id: @status.account.id)
 
         # Skip if the admin_account does not follow the status owner and the owner is a bot
-        next if !status_follower_admin_account_ids.include?(admin_account_id) && @status.account.bot?
+        next log_admin_decision(admin_account, 'custom', 'skipped=bot_author_not_followed') if !status_follower_admin_account_ids.include?(admin_account_id) && @status.account.bot?
 
         # Skip if `and_condition?` is true and admin_account is not in both follower lists
         if content_type&.and_condition? && !(tag_follower_admin_account_ids.include?(admin_account_id) &&
                       status_follower_admin_account_ids.include?(admin_account_id))
+          log_admin_decision(admin_account, 'custom', 'skipped=author_and_tag_follow_required')
           next
         end
 
-        next if newsmast_global_filter?(@status.id, community.id, 'filter_out')
+        next log_admin_decision(admin_account, 'custom', 'skipped=global_filter_out') if newsmast_global_filter?(@status.id, community.id, 'filter_out')
 
-        next unless valid_post_type?(community) && status_has_keyword?(@status.id, community.id, 'filter_in') && !status_has_keyword?(@status.id, community.id, 'filter_out')
+        next log_admin_decision(admin_account, 'custom', 'skipped=post_type_not_allowed') unless valid_post_type?(community)
+        next log_admin_decision(admin_account, 'custom', 'skipped=filter_in_not_matched') unless status_has_keyword?(@status.id, community.id, 'filter_in')
+        next log_admin_decision(admin_account, 'custom', 'skipped=filter_out_matched') if status_has_keyword?(@status.id, community.id, 'filter_out')
 
         admin_accounts << admin_account_id
 
         # skip if no_boost_channel is true
         unless community&.no_boost_channel
           ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
+          queued_reblogs += 1
+          log_admin_decision(admin_account, 'custom', 'reblog_queued=true')
+        else
+          log_admin_decision(admin_account, 'custom', 'skipped=boost_disabled')
         end
       end
 
@@ -78,10 +91,14 @@ module ContentFilters
 
       options = {"admin_accounts" => admin_accounts}
       DistributionWorker.perform_async(@status.id, options)
+      Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=custom matched=#{admin_accounts.size} reblogs_queued=#{queued_reblogs} distribution_queued=true"
     end
 
     def process_group_channels(community_admin_account_ids)
-      return if @status.reply? || @status.reblog?
+      if @status.reply? || @status.reblog?
+        Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=group skipped=reply_or_reblog"
+        return
+      end
 
       community_admins = Account.where(id: community_admin_account_ids)
 
@@ -89,21 +106,32 @@ module ContentFilters
 
       group_channel_admins = community_admins.select do |admin_account|
         admin_account_id = admin_account&.id
-        next unless admin_account_id
+        next log_admin_decision(admin_account, 'group', 'skipped=missing_admin_id') unless admin_account_id
 
         community = get_community(admin_account_id)
-        community&.content_type&.group_channel?
+        next log_admin_decision(admin_account, 'group', 'skipped=community_not_found') unless community
+        next log_admin_decision(admin_account, 'group', 'skipped=not_group_channel') unless community.content_type&.group_channel?
+
+        true
       end
 
       group_channel_admins.each do |admin_account|
         admin_account_id = admin_account&.id
-        if @status.mentioned_account?(admin_account_id) && @status.account.follow_account?(admin_account_id)
-          admin_accounts << admin_account_id
-          ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
-        end
+        next log_admin_decision(admin_account, 'group', 'skipped=admin_not_mentioned') unless @status.mentioned_account?(admin_account_id)
+        next log_admin_decision(admin_account, 'group', 'skipped=admin_not_followed') unless @status.account.follow_account?(admin_account_id)
+
+        admin_accounts << admin_account_id
+        ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
+        log_admin_decision(admin_account, 'group', 'reblog_queued=true')
       end
       options = {"admin_accounts" => admin_accounts}
       DistributionWorker.perform_async(@status.id, options)
+      Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=group matched=#{admin_accounts.size} reblogs_queued=#{admin_accounts.size} distribution_queued=true"
+    end
+
+    def log_admin_decision(admin_account, channel, decision)
+      Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=#{channel} admin_id=#{admin_account&.id} admin_username=#{admin_account&.username.to_s.dump} #{decision}"
+      nil
     end
 
     def valid_post_type?(community)
