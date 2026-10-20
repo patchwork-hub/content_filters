@@ -27,6 +27,7 @@ module ContentFilters
 
     def process_custom_channels(community_admin_account_ids)
 
+      Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=custom started=true"
       # Find community admins who follow at least one account that reblogged this status.
       reblog_follower_admin_accounts = Account.where(id: community_admin_account_ids).where(
         id: Follow.where(
@@ -44,6 +45,7 @@ module ContentFilters
       admin_accounts = []
       queued_reblogs = 0
 
+      Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=custom unique_admin_account_ids=#{unique_admin_account_ids.join(',')}"
       Account.where(id: unique_admin_account_ids).find_each do |admin_account|
         admin_account_id = admin_account&.id
         next log_admin_decision(admin_account, 'custom', 'skipped=missing_admin_id') unless admin_account_id
@@ -91,7 +93,7 @@ module ContentFilters
 
       options = {"admin_accounts" => admin_accounts}
       DistributionWorker.perform_async(@status.id, options)
-      Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=custom matched=#{admin_accounts.size} reblogs_queued=#{queued_reblogs} distribution_queued=true"
+      Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=custom matched=#{admin_accounts.size} matched_accounts=#{admin_accounts.map(&:to_s).join(',')} reblogs_queued=#{queued_reblogs} distribution_queued=true"
     end
 
     def process_group_channels(community_admin_account_ids)

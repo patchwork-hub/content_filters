@@ -25,6 +25,7 @@ class ReblogChannelsWorker
       boost_by_newsmast_bot(community_admin, status_id)
     else
       begin
+        Rails.logger.info "[ReblogChannelsWorker] status_id=#{status_id} admin_account=#{admin_account.id} | #{admin_account.username} started=true"
         ContentFilters::ReblogRequestService.new.call(admin_access_token, status_id)
         ## Need to check channel?, channel_type
         Rails.logger.info "======= START TO CALL CUSTOM BOOST BOT SERVICE ======="
