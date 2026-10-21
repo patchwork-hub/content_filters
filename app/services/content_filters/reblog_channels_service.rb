@@ -88,6 +88,7 @@ module ContentFilters
             status_id: @status.id,
             status_uri: @status.uri,
             admin_account_id: admin_account_id,
+            admin_username: admin_account&.username.to_s.dump,
             jid: jid
           )
           queued_reblogs += 1
@@ -133,6 +134,7 @@ module ContentFilters
             status_id: @status.id,
             status_uri: @status.uri,
             admin_account_id: admin_account_id,
+            admin_username: admin_account&.username.to_s.dump,
             jid: jid
           )
         end

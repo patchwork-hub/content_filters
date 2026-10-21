@@ -23,7 +23,7 @@ module ContentFilters
       when Net::HTTPSuccess
         JSON.parse(response.body)
       else
-        raise "Reblog creation failed: #{response.body}"
+        raise "[ReblogRequestService] Reblog creation failed: #{response.body}"
       end
     end
 
