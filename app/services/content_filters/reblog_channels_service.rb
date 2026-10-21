@@ -14,9 +14,11 @@ module ContentFilters
         community_admin_account_ids = ContentFilters::CommunityAdmin.where(is_boost_bot: true, account_status: ContentFilters::CommunityAdmin::account_statuses[:active]).pluck(:account_id)
 
         # Custom Channel
+        Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} status=process_custom_channels_started"
         process_custom_channels(community_admin_account_ids)
 
         # Group Channel
+        Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} status=process_group_channels_started"
         process_group_channels(community_admin_account_ids)
       else
         Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} skipped=sensitive_or_unlisted"
@@ -27,7 +29,7 @@ module ContentFilters
 
     def process_custom_channels(community_admin_account_ids)
 
-      Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=custom started=true"
+      Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=custom started=(process_custom_channels)"
       # Find community admins who follow at least one account that reblogged this status.
       reblog_follower_admin_accounts = Account.where(id: community_admin_account_ids).where(
         id: Follow.where(
@@ -115,6 +117,7 @@ module ContentFilters
         admin_account_id = admin_account&.id
         if @status.mentioned_account?(admin_account_id) && @status.account.follow_account?(admin_account_id)
           admin_accounts << admin_account_id
+          Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=group admin_id=#{admin_account_id} admin_username=#{admin_account&.username.to_s.dump} reblog_queued=true"
           ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
         end
       end
