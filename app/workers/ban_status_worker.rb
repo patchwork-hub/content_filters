@@ -20,7 +20,8 @@ class BanStatusWorker
       end
       status.update!(attrs)
     else
-      ContentFilters::ReblogChannelsService.new.call(status) if reblog_enabled?(is_status_banned)
+      # Temporary comment out reblogging for banned statuses
+      # ContentFilters::ReblogChannelsService.new.call(status) if reblog_enabled?(is_status_banned)
     end
   end
 
