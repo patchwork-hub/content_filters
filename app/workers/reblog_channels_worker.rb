@@ -45,7 +45,7 @@ class ReblogChannelsWorker
     return false unless @status
 
     if @status.reblog?
-      @status = @status.reblogged_status
+      @status = @status.reblog
     end
 
     return false if @status.nil? || @status.reply? || community_admin.nil?
