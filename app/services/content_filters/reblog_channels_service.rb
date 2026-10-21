@@ -81,7 +81,15 @@ module ContentFilters
 
         # skip if no_boost_channel is true
         unless community&.no_boost_channel
-          ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
+          jid = ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
+          Rails.logger.info(
+            event: 'channel_reblog_enqueued(custom)',
+            path: 'custom',
+            status_id: @status.id,
+            status_uri: @status.uri,
+            admin_account_id: admin_account_id,
+            jid: jid
+          )
           queued_reblogs += 1
           log_admin_decision(admin_account, 'custom', 'reblog_queued=true')
         else
@@ -118,7 +126,15 @@ module ContentFilters
         if @status.mentioned_account?(admin_account_id) && @status.account.follow_account?(admin_account_id)
           admin_accounts << admin_account_id
           Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=group admin_id=#{admin_account_id} admin_username=#{admin_account&.username.to_s.dump} reblog_queued=true"
-          ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
+          jid = ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
+          Rails.logger.info(
+            event: 'channel_reblog_enqueued(group)',
+            path: 'group',
+            status_id: @status.id,
+            status_uri: @status.uri,
+            admin_account_id: admin_account_id,
+            jid: jid
+          )
         end
       end
       options = {"admin_accounts" => admin_accounts}
