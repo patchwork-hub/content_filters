@@ -20,7 +20,6 @@ class BanStatusWorker
       end
       status.update!(attrs)
     else
-      Rails.logger.info "[ReblogChannelsService] status_id=#{status.id} status=begin_reblog_channels"
       ContentFilters::ReblogChannelsService.new.call(status) if reblog_enabled?(is_status_banned)
     end
   end

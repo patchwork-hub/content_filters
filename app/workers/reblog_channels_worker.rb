@@ -25,14 +25,12 @@ class ReblogChannelsWorker
       boost_by_newsmast_bot(community_admin, status_id)
     else
       begin
-        Rails.logger.info "[ReblogChannelsWorker] status_id=#{status_id} admin_account=#{admin_account.id} | #{admin_account.username} started=true"
         ContentFilters::ReblogRequestService.new.call(admin_access_token, status_id)
         ## Need to check channel?, channel_type
         channels = ENV.fetch('FOR_YOU_TIMELINE_CHANNELS').presence&.split(/\s*,\s*/)&.reject(&:blank?)&.map(&:downcase) || []
-        Rails.logger.info "[ReblogChannelsWorker] status_id=#{status_id} admin_account=#{admin_account.id} | #{admin_account.username} channels=#{channels.join(',')}"
         ContentFilters::CustomBoostBotService.new(status_id, community_admin&.username).call if channels.include?(community_admin&.username.downcase)
       rescue => e
-        Rails.logger.error "ReblogRequestService failed: - #{e.message}"
+        Rails.logger.error "[ReblogChannelsWorker] status_id=#{status_id} admin_account_id=#{admin_account.id} error=#{e.class} ReblogRequestService failed: #{e.message}"
         false
       end
     end
@@ -54,7 +52,7 @@ class ReblogChannelsWorker
     bot_lamda_service = ContentFilters::BoostLamdaNewsmastService.new
     boost_status = bot_lamda_service.boost_status(community_admin&.username, @status.id, post_url.to_s)
     if boost_status['statusCode'] == 200
-      Rails.logger.info "[ReblogChannelsWorker] status_id=#{@status.id} admin_username=#{community_admin&.username} boost_status=success"
+      Rails.logger.debug "[ReblogChannelsWorker] status_id=#{@status.id} admin_username=#{community_admin&.username} boost_status=success"
     else
       Rails.logger.error "[ReblogChannelsWorker] status_id=#{@status.id} admin_username=#{community_admin&.username} boost_status=failure response=#{boost_status.inspect}"
     end

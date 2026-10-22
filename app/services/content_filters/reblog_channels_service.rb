@@ -8,7 +8,7 @@ module ContentFilters
 
         # Skip if the reblog is older than 7 days
         if @status.reblog? && @status.reblog.created_at < 7.days.ago.utc
-          Rails.logger.info(
+          Rails.logger.debug(
             "[ReblogChannelsService] status_id=#{@status.id} " \
             "of reblog_id=#{@status.reblog.id} skipped=older_than_7_days"
           )
@@ -17,21 +17,19 @@ module ContentFilters
 
         # Channel reboost filtered by 7-day posts
         if @status.created_at < 7.days.ago.utc
-          Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} skipped=older_than_7_days"
+          Rails.logger.debug "[ReblogChannelsService] status_id=#{@status.id} skipped=older_than_7_days"
           return
         end
 
         community_admin_account_ids = ContentFilters::CommunityAdmin.where(is_boost_bot: true, account_status: ContentFilters::CommunityAdmin::account_statuses[:active]).pluck(:account_id)
 
         # Custom Channel
-        Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} status=process_custom_channels_started"
         process_custom_channels(community_admin_account_ids)
 
         # Group Channel
-        Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} status=process_group_channels_started"
         process_group_channels(community_admin_account_ids)
       else
-        Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} skipped=sensitive_or_unlisted"
+        Rails.logger.debug "[ReblogChannelsService] status_id=#{@status.id} skipped=sensitive_or_unlisted"
       end
     end
 
@@ -39,7 +37,6 @@ module ContentFilters
 
     def process_custom_channels(community_admin_account_ids)
 
-      Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=custom started=(process_custom_channels)"
       # Find community admins who follow at least one account that reblogged this status.
       reblog_follower_admin_accounts = Account.where(id: community_admin_account_ids).where(
         id: Follow.where(
@@ -57,7 +54,6 @@ module ContentFilters
       admin_accounts = []
       queued_reblogs = 0
 
-      Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=custom unique_admin_account_ids=#{unique_admin_account_ids.join(',')}"
       Account.where(id: unique_admin_account_ids).find_each do |admin_account|
         admin_account_id = admin_account&.id
         next log_admin_decision(admin_account, 'custom', 'skipped=missing_admin_id') unless admin_account_id
@@ -91,16 +87,7 @@ module ContentFilters
 
         # skip if no_boost_channel is true
         unless community&.no_boost_channel
-          jid = ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
-          Rails.logger.info(
-            event: 'channel_reblog_enqueued(custom)',
-            path: 'custom',
-            status_id: @status.id,
-            status_uri: @status.uri,
-            admin_account_id: admin_account_id,
-            admin_username: admin_account&.username.to_s.dump,
-            jid: jid
-          )
+          ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
           queued_reblogs += 1
           log_admin_decision(admin_account, 'custom', 'reblog_queued=true')
         else
@@ -114,7 +101,7 @@ module ContentFilters
 
       options = {"admin_accounts" => admin_accounts}
       DistributionWorker.perform_async(@status.id, options)
-      Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=custom matched=#{admin_accounts.size} matched_accounts=#{admin_accounts.map(&:to_s).join(',')} reblogs_queued=#{queued_reblogs} distribution_queued=true"
+      Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=custom matched=#{admin_accounts.size} reblogs_queued=#{queued_reblogs} distribution_queued=true"
     end
 
     def process_group_channels(community_admin_account_ids)
@@ -136,17 +123,7 @@ module ContentFilters
         admin_account_id = admin_account&.id
         if @status.mentioned_account?(admin_account_id) && @status.account.follow_account?(admin_account_id)
           admin_accounts << admin_account_id
-          Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=group admin_id=#{admin_account_id} admin_username=#{admin_account&.username.to_s.dump} reblog_queued=true"
-          jid = ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
-          Rails.logger.info(
-            event: 'channel_reblog_enqueued(group)',
-            path: 'group',
-            status_id: @status.id,
-            status_uri: @status.uri,
-            admin_account_id: admin_account_id,
-            admin_username: admin_account&.username.to_s.dump,
-            jid: jid
-          )
+          ReblogChannelsWorker.perform_async(@status.id, admin_account_id)
         end
       end
       options = {"admin_accounts" => admin_accounts}
@@ -154,7 +131,7 @@ module ContentFilters
     end
 
     def log_admin_decision(admin_account, channel, decision)
-      Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} channel=#{channel} admin_id=#{admin_account&.id} admin_username=#{admin_account&.username.to_s.dump} #{decision}"
+      Rails.logger.debug "[ReblogChannelsService] status_id=#{@status.id} channel=#{channel} admin_id=#{admin_account&.id} #{decision}"
       nil
     end
 
