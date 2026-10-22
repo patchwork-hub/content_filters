@@ -5,6 +5,16 @@ module ContentFilters
     def call(status)
       @status = status
       unless @status.sensitive? || @status.unlisted_visibility?
+
+        # Skip if the reblog is older than 7 days
+        if @status.reblog? && @status.reblog.created_at < 7.days.ago.utc
+          Rails.logger.info(
+            "[ReblogChannelsService] status_id=#{@status.id} " \
+            "of reblog_id=#{@status.reblog.id} skipped=older_than_7_days"
+          )
+          return
+        end
+
         # Channel reboost filtered by 7-day posts
         if @status.created_at < 7.days.ago.utc
           Rails.logger.info "[ReblogChannelsService] status_id=#{@status.id} skipped=older_than_7_days"
@@ -62,7 +72,7 @@ module ContentFilters
         next log_admin_decision(admin_account, 'custom', 'skipped=author_muted') if Mute.exists?(account_id: admin_account_id, target_account_id: @status.account.id)
 
         # Skip if the admin_account does not follow the status owner and the owner is a bot
-        next log_admin_decision(admin_account, 'custom', 'skipped=bot_author_not_followed') if !status_follower_admin_account_ids.include?(admin_account_id) && @status.account.bot?
+        # next log_admin_decision(admin_account, 'custom', 'skipped=bot_author_not_followed') if !status_follower_admin_account_ids.include?(admin_account_id) && @status.account.bot?
 
         # Skip if `and_condition?` is true and admin_account is not in both follower lists
         if content_type&.and_condition? && !(tag_follower_admin_account_ids.include?(admin_account_id) &&
